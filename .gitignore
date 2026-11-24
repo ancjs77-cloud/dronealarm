@@ -7,3 +7,4 @@ android_apk/out/
 *-unsigned.apk
 __pycache__/
 tools/bin/
+.vercel
