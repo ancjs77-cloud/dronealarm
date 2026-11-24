@@ -1,0 +1,56 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#020814;overflow:hidden}svg{display:block;width:100vw;height:100vh}</style></head><body>
+<svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+<defs>
+ <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020814"/><stop offset=".45" stop-color="#06183a"/><stop offset=".62" stop-color="#0b2d5c"/><stop offset=".63" stop-color="#03101f"/><stop offset="1" stop-color="#010409"/></linearGradient>
+ <radialGradient id="glow" cx=".5" cy=".62" r=".5"><stop offset="0" stop-color="#18e0ff" stop-opacity=".45"/><stop offset="1" stop-color="#18e0ff" stop-opacity="0"/></radialGradient>
+ <radialGradient id="redg" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff3b3b" stop-opacity=".9"/><stop offset="1" stop-color="#ff3b3b" stop-opacity="0"/></radialGradient>
+ <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5ff6ff" stop-opacity="0"/><stop offset="1" stop-color="#5ff6ff" stop-opacity=".9"/></linearGradient>
+ <filter id="bl"><feGaussianBlur stdDeviation="3"/></filter><filter id="bl2"><feGaussianBlur stdDeviation="10"/></filter>
+ <pattern id="hex" width="56" height="48.5" patternUnits="userSpaceOnUse"><path d="M14 0h28l14 24.25-14 24.25H14L0 24.25z" fill="none" stroke="#2ad4ff" stroke-opacity=".07" stroke-width="1.2"/></pattern>
+ <g id="drone"><rect x="-14" y="-5" width="28" height="10" rx="4" fill="#0d1b2a" stroke="#ff5a5a" stroke-width="2"/><path d="M-12-3L-30-14M12-3L30-14M-12 3L-30 14M12 3L30 14" stroke="#ff5a5a" stroke-width="3"/><ellipse cx="-30" cy="-14" rx="13" ry="3" fill="#ff5a5a" opacity=".55"/><ellipse cx="30" cy="-14" rx="13" ry="3" fill="#ff5a5a" opacity=".55"/><ellipse cx="-30" cy="14" rx="13" ry="3" fill="#ff5a5a" opacity=".55"/><ellipse cx="30" cy="14" rx="13" ry="3" fill="#ff5a5a" opacity=".55"/><circle r="2.5" fill="#fff"/></g>
+ <g id="jet"><path d="M0-6L60 0 0 6-8 26-16 26-10 5-36 4-44 14-50 14-46 2-46-2-50-14-44-14-36-4-10-5-16-26-8-26z" fill="#9fb3c8"/><path d="M30-2L48 0 30 2z" fill="#22e3ff"/></g>
+</defs>
+<rect width="1920" height="1080" fill="url(#sky)"/>
+<rect width="1920" height="680" fill="url(#hex)"/>
+<!-- stars -->
+<g fill="#cfe9ff" opacity=".7"><circle cx="120" cy="80" r="1.4"/><circle cx="340" cy="150" r="1"/><circle cx="560" cy="60" r="1.6"/><circle cx="780" cy="190" r="1"/><circle cx="1010" cy="90" r="1.3"/><circle cx="1240" cy="40" r="1"/><circle cx="1460" cy="160" r="1.5"/><circle cx="1690" cy="70" r="1.1"/><circle cx="1850" cy="210" r="1.3"/><circle cx="240" cy="300" r="1"/><circle cx="1580" cy="320" r="1"/><circle cx="900" cy="300" r="1.2"/></g>
+<!-- skyline / mountains -->
+<path d="M0 640L120 590 260 615 380 560 520 600 640 575 760 610 900 585 1040 612 1180 570 1320 605 1460 560 1600 598 1760 572 1920 600V680H0z" fill="#06142b"/>
+<g fill="#0a2148"><rect x="1500" y="560" width="26" height="80"/><rect x="1530" y="585" width="40" height="55"/><rect x="1580" y="540" width="18" height="100"/><rect x="200" y="570" width="34" height="70"/><rect x="240" y="590" width="50" height="50"/></g>
+<!-- control tower -->
+<g transform="translate(1340 470)"><rect x="-10" y="40" width="20" height="170" fill="#0b2246"/><path d="M-46 40h92l-14-34h-64z" fill="#0f3266" stroke="#2ad4ff" stroke-width="2"/><rect x="-40" y="14" width="80" height="12" fill="#2ad4ff" opacity=".75"/><line x1="0" y1="6" x2="0" y2="-40" stroke="#2ad4ff" stroke-width="2"/><circle cy="-44" r="5" fill="#ff4d4d"/></g>
+<!-- horizon glow -->
+<ellipse cx="960" cy="672" rx="900" ry="120" fill="url(#glow)"/>
+<!-- perspective grid floor -->
+<g stroke="#1fd2ff" stroke-opacity=".22" stroke-width="1.3">
+ <line x1="960" y1="680" x2="-1400" y2="1080"/><line x1="960" y1="680" x2="-700" y2="1080"/><line x1="960" y1="680" x2="-200" y2="1080"/><line x1="960" y1="680" x2="250" y2="1080"/><line x1="960" y1="680" x2="620" y2="1080"/><line x1="960" y1="680" x2="1300" y2="1080"/><line x1="960" y1="680" x2="1670" y2="1080"/><line x1="960" y1="680" x2="2120" y2="1080"/><line x1="960" y1="680" x2="2620" y2="1080"/><line x1="960" y1="680" x2="3320" y2="1080"/>
+ <line x1="0" y1="700" x2="1920" y2="700"/><line x1="0" y1="728" x2="1920" y2="728"/><line x1="0" y1="768" x2="1920" y2="768"/><line x1="0" y1="826" x2="1920" y2="826"/><line x1="0" y1="910" x2="1920" y2="910"/><line x1="0" y1="1040" x2="1920" y2="1040"/></g>
+<!-- runway -->
+<path d="M930 682L990 682 1180 1080 740 1080z" fill="#0b1626" stroke="#7df9ff" stroke-width="3"/>
+<g stroke="#e8fbff" stroke-width="5" opacity=".9"><line x1="960" y1="700" x2="960" y2="716"/><line x1="960" y1="740" x2="960" y2="764"/><line x1="960" y1="800" x2="960" y2="836"/><line x1="960" y1="886" x2="960" y2="940"/><line x1="960" y1="1006" x2="960" y2="1080"/></g>
+<g fill="#ffd54f"><circle cx="925" cy="700" r="2.5"/><circle cx="995" cy="700" r="2.5"/><circle cx="912" cy="740" r="3"/><circle cx="1008" cy="740" r="3"/><circle cx="893" cy="800" r="3.5"/><circle cx="1027" cy="800" r="3.5"/><circle cx="866" cy="886" r="4.5"/><circle cx="1054" cy="886" r="4.5"/><circle cx="824" cy="1006" r="5.5"/><circle cx="1096" cy="1006" r="5.5"/></g>
+<!-- igloo shelters -->
+<g fill="#0e2a4a" stroke="#2ad4ff" stroke-width="2"><path d="M300 760a70 46 0 0 1 140 0z"/><path d="M500 735a52 34 0 0 1 104 0z"/><path d="M1360 740a56 36 0 0 1 112 0z"/><path d="M1540 770a74 48 0 0 1 148 0z"/></g>
+<!-- holographic radar dome over base -->
+<g fill="none" stroke="#2ad4ff"><ellipse cx="960" cy="690" rx="820" ry="150" stroke-opacity=".35" stroke-width="2" stroke-dasharray="14 10"/><ellipse cx="960" cy="690" rx="520" ry="96" stroke-opacity=".45" stroke-width="2"/><ellipse cx="960" cy="690" rx="260" ry="48" stroke="#ff9f43" stroke-opacity=".6" stroke-width="2"/>
+ <path d="M140 690A820 560 0 0 1 1780 690" stroke-opacity=".28" stroke-width="2"/><path d="M440 690A520 380 0 0 1 1480 690" stroke-opacity=".22" stroke-width="1.5"/></g>
+<path d="M960 690L1560 330A820 560 0 0 1 1730 520z" fill="#2ad4ff" opacity=".07"/>
+<!-- defense turrets + beams -->
+<g><path d="M420 920l40-30 40 30z" fill="#0f3266" stroke="#5ff6ff" stroke-width="2"/><path d="M1440 930l40-30 40 30z" fill="#0f3266" stroke="#5ff6ff" stroke-width="2"/></g>
+<line x1="460" y1="890" x2="640" y2="330" stroke="url(#beam)" stroke-width="5"/><line x1="460" y1="890" x2="640" y2="330" stroke="#bffcff" stroke-width="1.5"/>
+<line x1="1480" y1="900" x2="1300" y2="250" stroke="#5ff6ff" stroke-width="4" opacity=".7"/>
+<!-- drones -->
+<g><circle cx="640" cy="330" r="44" fill="url(#redg)" filter="url(#bl)"/><use href="#drone" x="640" y="330" opacity=".5"/>
+ <path d="M612 300l10 10M670 300l-10 10M612 360l10-10M670 360l-10-10" stroke="#ffd54f" stroke-width="3"/></g>
+<use href="#drone" x="1300" y="250"/><circle cx="1300" cy="250" r="40" fill="none" stroke="#ff5a5a" stroke-width="2" stroke-dasharray="6 6"/>
+<use href="#drone" transform="translate(1660 180) scale(.8)"/><use href="#drone" transform="translate(260 200) scale(.7)"/><use href="#drone" transform="translate(1080 140) scale(.6)"/>
+<!-- target brackets -->
+<g stroke="#ff5a5a" stroke-width="2.5" fill="none"><path d="M1620 145h-14v14M1700 145h14v14M1620 215h-14v-14M1700 215h14v-14"/><path d="M225 170h-12v12M295 170h12v12M225 230h-12v-12M295 230h12v-12"/></g>
+<g font-family="sans-serif" font-size="15" fill="#ff8a8a"><text x="1720" y="140">UAS-03 · 4.8km</text><text x="300" y="166">UAS-07 · 9.6km</text><text x="1340" y="226">LOCK</text></g>
+<!-- jets -->
+<use href="#jet" transform="translate(1120 420) rotate(-12) scale(1.3)"/><use href="#jet" transform="translate(820 470) rotate(-8) scale(.9)"/>
+<path d="M1050 436l-260 50" stroke="#22e3ff" stroke-opacity=".35" stroke-width="2"/>
+<!-- HUD corners -->
+<g stroke="#2ad4ff" stroke-width="3" fill="none" opacity=".8"><path d="M30 90V30h60M1890 90V30h-60M30 990v60h60M1890 990v60h-60"/></g>
+<g font-family="sans-serif" fill="#7fe8ff" font-size="16" opacity=".75"><text x="44" y="70">AIRBASE C-UAS NET · ONLINE</text><text x="1650" y="70">THREAT LV · AUTO</text></g>
+</svg></body></html>

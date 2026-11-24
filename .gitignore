@@ -1,0 +1,9 @@
+tools/out/
+tools/docs_build/art/*.png
+tools/docs_build/art/*.jpg
+tools/docs_build/manual/manual.html
+android_apk/build/
+android_apk/out/
+*-unsigned.apk
+__pycache__/
+tools/bin/
