@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0f2a44">
+<title>드론경보</title>
+<style>
+:root{--navy:#0f2a44;--bg:#eef2f6;--line:#d7dee6;--muted:#5f6b7a;--ok:#2e7d32;
+--l0:#78909c;--l1:#f2c200;--l2:#f57c00;--l3:#e53935;--l4:#8e0000;--train:#1565c0;--real:#c62828}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Malgun Gothic","맑은 고딕","Noto Sans CJK KR","Noto Sans KR",system-ui,sans-serif;background:var(--bg);color:#1b2430;font-size:16px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:#fff;padding:9px 14px}
+button:disabled{opacity:.4;cursor:default}
+button.pri{background:var(--navy);color:#fff;border:none;font-weight:700}
+button.okb{background:var(--ok);color:#fff;border:none;font-weight:900}
+button.dang{background:var(--real);color:#fff;border:none;font-weight:700}
+button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+input,select{font:inherit;padding:9px 10px;border:1px solid #b9c3cd;border-radius:8px;background:#fff}
+.band{color:#fff;padding:7px 14px;font-weight:700;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px}
+.band .sim{background:rgba(255,255,255,.22);border-radius:6px;padding:1px 8px}
+.band .who{margin-left:auto;font-weight:500;opacity:.95}
+.wrap{max-width:1400px;margin:0 auto;padding:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:16px;color:var(--navy)}
+.muted{color:var(--muted);font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:minmax(320px,460px) 1fr;gap:12px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid #e6ebf0;padding:6px 6px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12.5px}
+.tag{display:inline-block;border-radius:6px;padding:1px 8px;font-size:12.5px;font-weight:700;color:#fff}
+.lvbanner{border-radius:14px;padding:14px 16px;color:#fff}
+.lvbanner .t{font-size:30px;font-weight:900;line-height:1.1}
+.lvbanner.blink{animation:blink 1s steps(2,start) infinite}
+@keyframes blink{50%{filter:brightness(1.6) saturate(1.4)}}
+.eta{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums}
+.chk{display:flex;gap:12px;align-items:flex-start;padding:14px 12px;border-radius:12px;background:#f3f6f9;margin-bottom:8px;cursor:pointer;user-select:none;font-size:18px;line-height:1.35}
+.chk .box{flex:0 0 28px;height:28px;border-radius:8px;border:3px solid #90a4ae;background:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff}
+.chk.on{background:#e6f4ea}.chk.on .box{background:var(--ok);border-color:var(--ok)}
+.bigok{width:100%;height:62px;font-size:22px;border-radius:31px;margin-top:6px}
+.donebox{background:#e6f4ea;border-radius:12px;padding:14px;font-size:20px;font-weight:900;color:var(--ok);text-align:center}
+.prevwarn{background:#fff3e0;color:#e65100;border-radius:8px;padding:6px 10px;font-size:13.5px;margin-top:8px}
+.overlay{position:fixed;inset:0;background:rgba(10,20,30,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:#fff;border-radius:18px;max-width:560px;width:100%;padding:18px;max-height:90vh;overflow:auto}
+.alertpop{border-radius:18px;max-width:520px;width:100%;padding:22px;color:#fff;text-align:left}
+.alertpop .t{font-size:34px;font-weight:900}
+.toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);background:#263238;color:#fff;padding:10px 16px;border-radius:10px;z-index:60;font-size:14px}
+canvas{display:block;width:100%;max-width:440px;margin:auto;border-radius:12px;background:#0b1e33}
+.rolebtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rolebtns button{height:64px;font-size:19px;font-weight:700}
+.rolebtns button.sel{background:var(--navy);color:#fff}
+/* 시연 보드 */
+.board{display:flex;gap:16px;padding:12px;align-items:flex-start;height:calc(100vh - 46px);box-sizing:border-box}
+.bleft{width:460px;flex:0 0 460px;height:100%;overflow:auto;padding-right:4px}
+.phones{flex:1;display:flex;gap:18px;justify-content:center;align-items:flex-start;min-width:0;height:100%}
+.pcol{flex:0 1 380px;min-width:250px;height:100%;display:flex;flex-direction:column;position:relative}
+.plabel{text-align:center;font-weight:800;font-size:17px;margin-bottom:6px;color:#263238}
+.phone{flex:1;min-height:0;border:10px solid #1a1a1a;border-radius:22px;background:#fff;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 0 0 2px #6b6b6b,0 8px 24px rgba(0,0,0,.28);max-height:860px}
+.phone .pbar{height:24px;background:#000;color:#fff;font-size:12px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;position:relative}
+.phone .punch{position:absolute;left:50%;top:6px;width:11px;height:11px;margin-left:-5px;border-radius:50%;background:#222;box-shadow:0 0 0 2px #333}
+.phone .pnav{height:30px;background:#000;color:#bbb;display:flex;justify-content:space-around;align-items:center;font-size:15px}
+.pside{position:absolute;right:-4px;top:150px;width:4px;height:60px;background:#555;border-radius:0 3px 3px 0}
+.idlebg{background:#1d3326;min-height:100%}.idlemap{position:relative}.idlemap canvas,.pmapbox canvas{width:100%;display:block}
+.idleover{position:absolute;left:10px;right:10px;top:10px;background:rgba(55,71,79,.88);color:#fff;border-radius:12px;padding:10px 12px;font-size:17px}
+.idlebg .card{background:rgba(255,255,255,.95)}
+.pmapbox{margin-top:12px;border-radius:14px;overflow:hidden;background:#1d3326;max-width:520px}.pmapt{background:#263238;color:#fff;font-weight:800;padding:7px 10px;font-size:15px}
+.resetnote{background:#e8f5e9;border:2px solid #2e7d32;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-weight:700;color:#1b5e20}
+@media (max-width:1200px){ .board{flex-direction:column;height:auto} .bleft{width:100%;flex:none;height:auto} .phones{width:100%;height:760px} }
+.phone .scr{flex:1;overflow:auto;position:relative}
+.phone .chk{font-size:15px;padding:10px}.phone .lvbanner .t{font-size:24px}.phone .eta{font-size:22px}.phone .bigok{height:52px;font-size:19px}
+.phone .ptitle{font-size:12px;color:#cfd8dc;background:#111;padding:0 10px 4px}
+.igcard{border:3px solid #6a1b9a;border-radius:14px;padding:12px;margin-top:12px;background:#fbf8ff}
+.igcard .igt{font-size:19px;font-weight:900}
+.igdist{font-size:26px;font-weight:900;margin:4px 0 6px;font-variant-numeric:tabular-nums}
+.igcard canvas{max-width:100%;border-radius:10px;margin:0}
+.inpop{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:10px}
+.inpop .alertpop{padding:14px}.inpop .alertpop .t{font-size:24px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+"use strict";
+// ======================================================================
+// 드론경보 — PRD "비행장 드론 위협 경보·행동지시 앱" 오프라인 구현
+// 모든 부대·인원·절차 정보는 가상(시연용)입니다.
+// ======================================================================
+
+// ---------------- 기준 (PRD 3.2, 3.3, 부록 A)
+const LEVELS = [
+  {n:0, name:"상황 없음", km:null, color:"#78909c", text:"#fff"},
+  {n:1, name:"관심", km:10,  color:"#f2c200", text:"#1b2430"},
+  {n:2, name:"주의", km:5,   color:"#f57c00", text:"#fff"},
+  {n:3, name:"경계", km:3,   color:"#e53935", text:"#fff"},
+  {n:4, name:"심각", km:0.5, color:"#8e0000", text:"#fff"},
+];
+const ROLES = {pilot:"조종사", controller:"관제사", maintenance:"정비사", security:"방호관계자", room:"상황실"};
+const DUTY_ROLES = ["pilot","controller","maintenance","security"];
+const PROC = {
+  1:{pilot:["관제 주파수 청취 유지","드론 접근 방향(북측) 확인","이륙 대기 항공기 지연 가능성 대비"],
+     controller:["탐지 정보 확인","비행 중 항공기에 드론 정보 방송","이착륙 순서 재검토"],
+     maintenance:["활주로·유도로 인근 작업 인원 위치 파악","공구·장비 정리 준비","대피 경로 확인"],
+     security:["대드론 장비 가동 상태 점검","북측 감시 강화","대응 요원 대기"]},
+  2:{pilot:["신규 이륙 보류, 활주로 진입 전 대기","비행 중이면 관제 지시에 따른 진로 변경 준비","현재 위치 관제에 보고"],
+     controller:["신규 이륙 허가 보류","접근 항공기에 회피 방향 안내","상황실과 교신 유지"],
+     maintenance:["활주로 인근 작업 중지 준비","이동식 장비 고정","차량 이동 경로 확보"],
+     security:["대응 요원 배치","북측 육안 감시 시작","대응 장비 운용 준비"]},
+  3:{pilot:["@move:이륙 중지, 즉시 이동·입고 → 배정 {igloo}","착륙 접근 중이면 관제 복행·대기 지시 따름","엔진 운용 여부 관제 지시 대기"],
+     controller:["활주로 운영 일시 중지 선언","공중 항공기 대기·우회 지시","지상 이동 전면 중지 지시"],
+     maintenance:["@move:즉시 대피 → 가장 가까운 {igloo}","활주로·유도로 작업 중지, 차량·장비 이동","@close:대피한 이글루 문 닫기 (Close 완료)"],
+     security:["대응 장비 운용 준비 완료 보고","접근 경로 추적 유지","경비 구역 출입 통제"]},
+  4:{pilot:["관제 지시에 따라 항공기 정지·엔진 정지","@move:입고 확인 → 배정 {igloo}","이동 완료 보고"],
+     controller:["전 항공기 이동 중지","비행장 일시 폐쇄 방송","관제탑 인원 보호 조치"],
+     maintenance:["@move:전원 엄폐 → {igloo}","@close:이글루 문 닫힘 확인 (Close 완료)","인원 확인 결과 보고","연료 차량 등 위험물 이격 유지"],
+     security:["지휘 승인에 따른 대응","낙하 예상 지점 통제","피해 확인 및 보고"]},
+};
+/** 지시 항목: {text, kind} — kind 는 move(이글루 이동·대피) / close(이글루 닫기) / null */
+function procItems(level, role, iglooName){
+  return PROC[level][role].map(t=>{ const m=t.match(/^@(move|close):(.*)$/); const text=(m?m[2]:t).replace("{igloo}", iglooName||"이글루");
+    return {text, kind:m?m[1]:null}; });
+}
+const procFor = (level, role, iglooName) => procItems(level, role, iglooName).map(x=>x.text);
+// 활주로 기준 타원 거리: 활주로(방향 RWY.hdg, 반길이 RWY.half)를 장축으로 하는 타원 경계까지의 '단축 반경' 값
+const RWY={hdg:130, half:1375, sep:210};   // 시연용 모식 (130°/310° 방향, 길이 약 2.75km, 평행 활주로 2본)
+function rwyDist(dM, brgDeg){
+  const a=(brgDeg-RWY.hdg)*Math.PI/180, u=Math.abs(dM*Math.cos(a)), v=Math.abs(dM*Math.sin(a)), h=RWY.half;
+  if(v<0.5) return Math.max(0,u-h);
+  let lo=0, hi=dM+1; for(let i=0;i<50;i++){ const k=(lo+hi)/2; ((u/(k+h))**2+(v/k)**2>1)?lo=k:hi=k; } return hi;
+}
+function levelFor(distM){ return distM<=500?4 : distM<=3000?3 : distM<=5000?2 : distM<=10000?1 : 0; }
+function speedClass(kmh){ return kmh<=60?"slow" : kmh<150?"medium" : "fast"; }
+const SPEED_NAME = {slow:"저속", medium:"중속", fast:"고속"};
+function bearingName(deg){ const n=["북","북동","동","남동","남","남서","서","북서"]; return n[Math.round(((deg%360)+360)%360/45)%8]+"측"; }
+function fmtDur(sec){ sec=Math.max(0,Math.round(sec)); const m=Math.floor(sec/60), s=sec%60; return m>0?`${m}분 ${String(s).padStart(2,"0")}초`:`${s}초`; }
+const p2=n=>String(n).padStart(2,"0");
+function fmtClock(ms){ const d=new Date(ms); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; }
+function fmtDate(ms){ const d=new Date(ms); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${fmtClock(ms)}`; }
+const uid = () => Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------------- 이글루 (가상 배치 기본값 — 실제 위치 아님)
+// 실제 위치는 상황실에서 이글루 앞에 서서 "현재 위치에 이글루 추가(GPS)"로 등록합니다. 등록 정보는 그 단말에만 저장됩니다.
+// 주요 지점: 공개 지명의 대략 위치(방향·거리 참고용)
+const LANDMARKS=[["대구공항 터미널",35.8996,128.6383,"#ffd54f"],["팔공산",36.0160,128.6950,"#a5d6a7"],["동대구IC",35.8870,128.6680,"#80deea"],["동대구역",35.8797,128.6286,"#ce93d8"],["대구 시내(중앙로)",35.8690,128.5940,"#ffab91"]];
+const DEFAULT_CENTER={lat:35.8942, lon:128.6589};
+const RAD=Math.PI/180;
+function offsetLL(c, bearingDeg, m){ const b=bearingDeg*RAD; return {lat:c.lat+Math.cos(b)*m/110570, lon:c.lon+Math.sin(b)*m/(111320*Math.cos(c.lat*RAD))}; }
+function distM(a,b){ const p1=a.lat*RAD,p2=b.lat*RAD,dp=p2-p1,dl=(b.lon-a.lon)*RAD; const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2; return 2*6371008.8*Math.asin(Math.sqrt(Math.min(1,h))); }
+function bearingTo(a,b){ const p1=a.lat*RAD,p2=b.lat*RAD,dl=(b.lon-a.lon)*RAD; return (Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl))/RAD+360)%360; }
+function dirName(deg){ return ["북","북동","동","남동","남","남서","서","북서"][Math.round(((deg%360)+360)%360/45)%8]; }
+function fmtM(m){ return m>=1000?(m/1000).toFixed(2)+"km":Math.round(m)+"m"; }
+/** 가상 배치: 기준점 북동쪽·남서쪽 두 무리, 각 5개 (scale<1 이면 시연용으로 촘촘하게) */
+function virtualIgloos(center, scale){
+  // 활주로 기준(축 방향 a, 수직 p[+는 북동쪽], m)으로 비행장 둘레에 분산 배치 → 방위°·거리로 변환
+  const RF=[[-1150,620],[-450,900],[150,640],[750,950],[1350,700],[-1300,-720],[-650,-1000],[0,-780],[650,-1080],[1250,-760]];
+  const h=130*Math.PI/180, spots=RF.map(([a,q])=>{ const e=a*Math.sin(h)+q*Math.sin(h-Math.PI/2), n=a*Math.cos(h)+q*Math.cos(h-Math.PI/2); return [((Math.atan2(e,n)*180/Math.PI)+360)%360, Math.hypot(e,n)]; });
+  return spots.map(([b,m],i)=>{ const p=offsetLL(center,b,m*scale); return {id:"ig"+(i+1), name:`이글루 ${i+1}`, lat:p.lat, lon:p.lon, aircraft:false, aircraftBy:null, assignedTo:null, evac:[], closed:false, closedBy:null, closedAt:null, unavailable:false}; });
+}
+function iglooStatus(g){ if(g.unavailable) return ["사용 불가","#9e9e9e"]; if(g.closed) return ["닫힘","#37474f"]; if(g.aircraft) return ["항공기 입고","#1565c0"];
+  if(g.assignedTo) return ["배정(이동 중)","#ef6c00"]; if(g.evac&&g.evac.length) return [`대피 ${g.evac.length}명`,"#6a1b9a"]; return ["비어 있음","#2e7d32"]; }
+function nearestIg(list,pos,except){ let best=null,bd=1e18; list.forEach(g=>{ if(except&&g.id===except) return; const d=distM(pos,g); if(d<bd){bd=d;best=g;} }); return best; }
+const emptyIgloos = gs => gs.filter(g=>!g.unavailable&&!g.closed&&!g.aircraft&&!g.assignedTo);
+const openIgloos  = gs => gs.filter(g=>!g.unavailable&&!g.closed);
+
+// ---------------- 저장소와 창 간 동기화
+// 같은 기기(같은 브라우저)의 여러 창은 localStorage + BroadcastChannel 로 같은 상태를 봅니다.
+const KEY = "droneAlarm.v1";
+const WIN = uid();               // 이 창의 식별자
+const IS_APP = !!(window.AndroidBridge && window.AndroidBridge.isApp);
+function blank(){ return {members:{}, incidents:[], sim:null, settings:{pin:"1234"}, rev:0, center:{...DEFAULT_CENTER}, igloos:virtualIgloos(DEFAULT_CENTER,1), igLayout:2}; }
+function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)); if(!s||!s.members) return blank();
+  if(!s.igloos||(!s.customIgloos&&s.igLayout!==2&&s.center&&Math.abs(s.center.lat-DEFAULT_CENTER.lat)<1e-6)){ s.center={...DEFAULT_CENTER}; s.igloos=virtualIgloos(DEFAULT_CENTER,1); s.igLayout=2; } return s; }catch(e){ return blank(); } }
+let S = load();
+let chan=null; try{ chan=new BroadcastChannel("droneAlarm"); chan.onmessage=()=>{ S=load(); onState(); }; }catch(e){}
+window.addEventListener("storage", e=>{ if(e.key===KEY){ S=load(); onState(); } });
+/** 상태 변경: 최신 상태를 읽어 fn 적용 후 저장·전파 */
+function mutate(fn){
+  S = load(); fn(S); S.rev=(S.rev||0)+1;
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
+  try{ chan && chan.postMessage(S.rev); }catch(e){}
+  onState();
+}
+const active = () => S.incidents.find(i=>i.status==="active") || null;
+
+// ---------------- 서버 API에 해당하는 동작 (PRD 6.8)
+/** POST /api/members — 같은 직능+호출부호면 기존 사용자 */
+function apiMember(role, callsign){
+  let id=null;
+  mutate(s=>{
+    const ex=Object.values(s.members).find(m=>m.role===role&&m.callsign===callsign);
+    if(ex){ ex.lastSeen=Date.now(); id=ex.id; }
+    else { id=uid(); s.members[id]={id, role, callsign, createdAt:Date.now(), lastSeen:Date.now()}; }
+  });
+  return id;
+}
+/** POST /api/incidents — 새 상황 시작 */
+function apiStartIncident(mode, cfg){
+  mutate(s=>{
+    s.incidents.forEach(i=>{ if(i.status==="active"){ i.status="cleared"; i.clearedAt=Date.now(); } });
+    const inc={id:uid(), mode, source:"simulator", simMult:cfg.mult, speedClass:speedClass(cfg.speed), level:0,
+      startedAt:Date.now(), clearedAt:null, status:"active", alerts:[], acks:[], track:null, trackLog:[], checks:{}, report:null, iglooLog:[]};
+    (s.igloos||[]).forEach(g=>{ g.assignedTo=null; g.aircraftBy=null; g.evac=[]; });
+    s.incidents.unshift(inc); s.incidents=s.incidents.slice(0,30);
+    s.sim={incidentId:inc.id, dist:cfg.startKm*1000, speed:cfg.speed, bearing:cfg.bearing, mult:cfg.mult, paused:false, owner:WIN, beat:Date.now(), startKm:cfg.startKm};
+  });
+}
+/** POST /api/detections — 트랙 저장 → 단계 판정 → 새 단계면 경보 발령 */
+function apiDetection(s, distM, speedKmh, bearing, centerM){
+  const inc=s.incidents.find(i=>i.status==="active"); if(!inc) return;
+  const now=Date.now();
+  inc.track={distance_m:Math.round(distM), center_m:Math.round(centerM==null?distM:centerM), speed_kmh:speedKmh, bearing_deg:bearing, at:now};
+  inc.speedClass=speedClass(speedKmh);
+  if(inc.trackLog.length<2000) inc.trackLog.push([now,Math.round(distM)]);
+  if(inc.startCenter_m==null) inc.startCenter_m=Math.round(centerM==null?distM:centerM);
+  const lv=levelFor(distM);
+  // 격상만 자동. 같은 단계는 한 번만 발령. 한 번에 여러 선을 넘으면 넘은 단계를 모두 기록
+  for(let l=inc.level+1; l<=lv; l++){
+    inc.alerts.push({level:l, distance_m:Math.round(distM), speed_kmh:speedKmh, speed_class:speedClass(speedKmh),
+      bearing_deg:bearing, eta_sec:Math.round((centerM==null?distM:centerM)/(speedKmh/3.6)), issuedAt:now,
+      targets:Object.values(s.members).filter(m=>m.role!=="room"&&now-m.lastSeen<30000).map(m=>m.id)});
+    inc.level=l;
+  }
+}
+/** POST /api/acknowledgements — 개인 완료 (같은 경보에 한 번만) */
+function apiAck(memberId, level){
+  mutate(s=>{
+    const inc=s.incidents.find(i=>i.status==="active"); const m=s.members[memberId]; if(!inc||!m) return;
+    if(inc.acks.some(a=>a.level===level&&a.memberId===memberId)) return;
+    const al=inc.alerts.find(a=>a.level===level); if(!al) return;
+    const now=Date.now();
+    inc.acks.push({level, memberId, role:m.role, callsign:m.callsign, completedAt:now, elapsed:Math.round((now-al.issuedAt)/1000)});
+  });
+}
+/** POST /api/incidents/[id]/clear — 상황 해제 */
+function apiResetDemo(auto){
+  mutate(s=>{ const inc=s.incidents.find(i=>i.status==="active"); if(inc){ inc.status="cleared"; inc.clearedAt=Date.now(); }
+    const last=s.incidents[0];
+    (s.igloos||[]).forEach(g=>{ if(g.closed && last){ (last.iglooLog=last.iglooLog||[]).push({t:Date.now(), text:`상황실 ${g.name} 개방(초기화)`}); }
+      g.closed=false; g.closedBy=null; g.closedAt=null; g.evac=[]; g.assignedTo=null; if(g.aircraftBy){ g.aircraft=false; g.aircraftBy=null; } });
+    s.sim=null; s.resetAt=Date.now(); });
+  popup=null; boardPop={}; if(typeof resetPending!=="undefined") resetPending=null; toast(auto?"상황 종료 · 처음 시연 상태로 돌아왔습니다":"처음 상태로 되돌렸습니다");
+}
+function apiClear(){
+  mutate(s=>{ const inc=s.incidents.find(i=>i.status==="active"); if(inc){ inc.status="cleared"; inc.clearedAt=Date.now(); } s.sim=null;
+    (s.igloos||[]).forEach(g=>{ if(!g.aircraft) g.assignedTo=null; }); });
+}
+// ---------------- 이글루 동작 (조종사 배정·입고, 정비사 대피·Close·Open)
+function igLog(s, text){ const inc=s.incidents.find(i=>i.status==="active")||s.incidents[0]; if(inc){ (inc.iglooLog=inc.iglooLog||[]).push({t:Date.now(), text}); } }
+const mName = (s,id) => { const m=s.members[id]; return m?`${ROLES[m.role]} ${m.callsign}`:"?"; };
+function apiIglooAssign(mid, pos, except){
+  mutate(s=>{ const gs=s.igloos||[]; const cur=gs.find(g=>g.assignedTo===mid);
+    if(cur && !except) return;
+    if(cur){ cur.assignedTo=null; }
+    const g=nearestIg(emptyIgloos(gs), pos, except); if(!g){ igLog(s, `${mName(s,mid)}: 배정 가능한 빈 이글루 없음`); return; }
+    g.assignedTo=mid; igLog(s, `${mName(s,mid)} → ${g.name} 배정 (${fmtM(distM(pos,g))})`); });
+}
+function apiIglooArrive(mid){ mutate(s=>{ const g=(s.igloos||[]).find(x=>x.assignedTo===mid); if(!g||g.aircraft) return; g.aircraft=true; g.aircraftBy=mid; igLog(s, `${mName(s,mid)} ${g.name} 도착·입고 완료`); }); }
+function apiIglooEnter(mid, gid){ mutate(s=>{ const gs=s.igloos||[]; gs.forEach(g=>{ g.evac=(g.evac||[]).filter(x=>x!==mid); }); const g=gs.find(x=>x.id===gid); if(!g) return; g.evac.push(mid); igLog(s, `${mName(s,mid)} ${g.name} 입실(대피 완료)`); }); }
+function apiIglooClose(mid, gid){ mutate(s=>{ const g=(s.igloos||[]).find(x=>x.id===gid); if(!g||g.closed) return; g.closed=true; g.closedBy=mid; g.closedAt=Date.now(); igLog(s, `${mName(s,mid)} ${g.name} Close 완료 (대피 ${(g.evac||[]).length}명)`); }); }
+function apiIglooOpen(mid, gid){ mutate(s=>{ const g=(s.igloos||[]).find(x=>x.id===gid); if(!g||!g.closed) return; g.closed=false; g.openedAt=Date.now(); g.evac=[]; g.assignedTo=null;
+  igLog(s, `${mid?mName(s,mid):"상황실"} ${g.name} Open 완료`); }); }
+
+// ---------------- 위치 (앱: 휴대폰 GPS / PC: 시연용 가상 위치)
+let browserFix=null;
+try{ if(!IS_APP && navigator.geolocation && location.protocol==="https:") navigator.geolocation.watchPosition(p=>{ browserFix={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()}; },()=>{},{enableHighAccuracy:true,maximumAge:5000}); }catch(e){}
+function gpsFix(){
+  if(IS_APP){ try{ const v=AndroidBridge.getLocation&&AndroidBridge.getLocation(); if(v){ const [lat,lon,acc,t]=String(v).split(",").map(Number); if(lat&&lon&&Date.now()-t<5*60000) return {lat,lon,acc,t}; } }catch(e){} return null; }
+  return browserFix&&Date.now()-browserFix.t<5*60000?browserFix:null;
+}
+const VPOS={pilot:[62,480], controller:[150,160], maintenance:[215,600], security:[310,1450]};   // 시연용 가상 위치 (기준점에서 방위°, m)
+/** 사용자 위치: 기준점 5km 안의 GPS 가 있으면 GPS, 아니면 시연용 가상 위치 */
+function myPosition(m){
+  const c=S.center||DEFAULT_CENTER, fix=route()==="board"?null:gpsFix();
+  if(fix && distM(fix,c)<5000) return {lat:fix.lat, lon:fix.lon, acc:fix.acc, src:"gps"};
+  const v=VPOS[m.role]||[0,300], p=offsetLL(c,v[0],v[1]); return {lat:p.lat, lon:p.lon, acc:null, src:fix?"far":"virtual"};
+}
+/** 이 사용자의 이글루: 조종사는 배정된 이글루, 정비사는 입실한 이글루 또는 가장 가까운 열린 이글루 */
+function myIgloo(m, pos){
+  const gs=S.igloos||[];
+  if(m.role==="pilot") return gs.find(g=>g.assignedTo===m.id)||null;
+  if(m.role==="maintenance") return gs.find(g=>(g.evac||[]).includes(m.id)) || nearestIg(openIgloos(gs), pos||myPosition(m));
+  return null;
+}
+function iglooDone(m, kind){
+  const gs=S.igloos||[];
+  if(kind==="move") return m.role==="pilot" ? gs.some(g=>g.aircraftBy===m.id) : gs.some(g=>(g.evac||[]).includes(m.id));
+  if(kind==="close") return gs.some(g=>g.closed&&((g.evac||[]).includes(m.id)||g.closedBy===m.id));
+  return false;
+}
+/** 3단계 이상이면 조종사에게 가장 가까운 빈 이글루를 자동 배정 (이 창이 맡은 사용자만) */
+function iglooTick(){
+  const inc=active(); if(!inc||inc.level<3) return;
+  const ids = route()==="board" ? (boardIds||[]) : (route()==="duty"&&me()?[me().id]:[]);
+  ids.forEach(id=>{ const m=S.members[id]; if(!m||m.role!=="pilot") return;
+    if(!(S.igloos||[]).some(g=>g.assignedTo===id) && emptyIgloos(S.igloos||[]).length) apiIglooAssign(id, myPosition(m)); });
+}
+setInterval(iglooTick, 1000);
+
+function setCheck(memberId, level, idx, on){
+  mutate(s=>{ const inc=s.incidents.find(i=>i.status==="active"); if(!inc) return;
+    const k=memberId+":"+level; const arr=inc.checks[k]||[]; arr[idx]=on; inc.checks[k]=arr; });
+}
+
+// ---------------- 가상 표적 시뮬레이터 (PRD 3.5) — 시작한 창이 1초마다 탐지 데이터 전송
+setInterval(()=>{
+  const sim=S.sim; if(!sim) return;
+  const now=Date.now();
+  // 시뮬레이터를 돌리던 창이 닫혔으면(5초 이상 응답 없음) 상황실 창이 이어받음
+  // (앱을 다시 켠 경우 등) 시뮬레이터를 돌리던 창이 5초 이상 응답이 없으면 이 창이 이어받음
+  if(sim.owner!==WIN){ if(now-sim.beat>5000+Math.random()*1500) mutate(s=>{ if(s.sim&&Date.now()-s.sim.beat>5000){ s.sim.owner=WIN; s.sim.beat=Date.now(); } }); return; }
+  mutate(s=>{
+    const m=s.sim; if(!m) return; m.beat=now;
+    if(m.paused) return;
+    m.dist=Math.max(100, Math.round((m.dist - m.speed/3.6*m.mult)*10)/10);   // 1초 × 배속 만큼 이동, 100m 지점에서 선회
+    apiDetection(s, rwyDist(m.dist, m.bearing), m.speed, m.bearing, m.dist);
+  });
+},1000);
+
+// ---------------- 알림: 진동·경보음·음성 (앱은 안드로이드 브리지, PC는 브라우저 기능)
+let actx=null;
+function unlockAudio(){ try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); actx.resume(); }catch(e){} }
+function beep(n, hi){ try{ unlockAudio(); for(let i=0;i<n;i++){ const o=actx.createOscillator(), g=actx.createGain(); o.type="square"; o.frequency.value=hi?1050:820;
+  o.connect(g); g.connect(actx.destination); const t=actx.currentTime+i*0.33; g.gain.setValueAtTime(0.13,t); g.gain.setValueAtTime(0,t+0.22); o.start(t); o.stop(t+0.24);} }catch(e){} }
+function vibrate(pattern){
+  if(IS_APP){ let t=0; pattern.forEach((ms,i)=>{ if(i%2===0) setTimeout(()=>{ try{ AndroidBridge.vibrate(ms); }catch(e){} }, t); t+=ms; }); }
+  else { try{ navigator.vibrate && navigator.vibrate(pattern); }catch(e){} }
+}
+function speak(text){
+  if(!prefs().voice) return;
+  if(IS_APP){ try{ AndroidBridge.speak(text); }catch(e){} return; }
+  try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="ko-KR"; u.rate=1.05; speechSynthesis.speak(u); }catch(e){}
+}
+const VIB = {1:[300,200,300], 2:[400,150,400,150,400], 3:[600,150,600,150,600], 4:[900,150,900,150,900,150,900], clear:[200,100,200], test:[500]};
+function prefs(){ try{ return Object.assign({voice:true}, JSON.parse(localStorage.getItem("droneAlarm.prefs")||"{}")); }catch(e){ return {voice:true}; } }
+function setPref(k,v){ const p=prefs(); p[k]=v; localStorage.setItem("droneAlarm.prefs", JSON.stringify(p)); }
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
+
+/** 알림 본문 (PRD 3.4 형식) */
+function alertText(inc, al, role, mid){
+  const pre=inc.mode==="training"?"[훈련] ":"";
+  const eta=al.eta_sec;
+  let igText="", igName=null;
+  const m=mid&&S.members[mid];
+  if(m && al.level>=3 && (role==="pilot"||role==="maintenance")){
+    const pos=myPosition(m); const g=myIgloo(m,pos) || (role==="pilot"?nearestIg(emptyIgloos(S.igloos||[]),pos):null);
+    if(g){ igName=g.name; igText=` / 대피: ${g.name} (${dirName(bearingTo(pos,g))} ${fmtM(distM(pos,g))})`; } else igText=" / 대피 가능한 이글루 없음: 상황실에 보고";
+  }
+  return `${pre}${al.level}단계 ${LEVELS[al.level].name} · ${SPEED_NAME[al.speed_class]} 드론 ${bearingName(al.bearing_deg)} ${(al.distance_m/1000).toFixed(1)}km · 도착 예상 ${fmtDur(eta)}`
+    + (role&&PROC[al.level][role] ? ` / ${ROLES[role]}: ${procFor(al.level,role,igName)[0]}` : "") + igText;
+}
+
+// ---------------- 이 창의 사용자
+function me(){ const id=sessionStorage.getItem("droneAlarm.me") || (IS_APP?localStorage.getItem("droneAlarm.me"):null); return id&&S.members[id]?S.members[id]:null; }
+function setMe(id){ sessionStorage.setItem("droneAlarm.me",id); localStorage.setItem("droneAlarm.me",id); }
+// 접속 표시(최근 30초): 직능 화면을 열어 둔 창이 5초마다 갱신
+setInterval(()=>{ const m=me(); if(m && (route()==="duty")) mutate(s=>{ if(s.members[m.id]) s.members[m.id].lastSeen=Date.now(); }); if(route()==="board") boardPresence(); },5000);
+
+// ---------------- 라우팅
+function route(){ return (location.hash.replace(/^#\/?/,"").split("?")[0]) || "entry"; }
+function go(r){ location.hash="#/"+r; }
+window.addEventListener("hashchange", render);
+window.onAndroidBack = function(){ const r=route(); if(r==="history") go("room"); else if(r==="room"||r==="board") go("entry"); else if(r==="duty") {} };
+function roomOk(){ const t=+sessionStorage.getItem("droneAlarm.room")||+localStorage.getItem("droneAlarm.roomT")||0; return Date.now()-t < 12*3600*1000; }
+
+// ---------------- 경보 감지 → 팝업·진동·음성 (창마다)
+let seen = JSON.parse(sessionStorage.getItem("droneAlarm.seen")||"{}");   // 창별로 이미 알린 경보
+function markSeen(k){ seen[k]=1; sessionStorage.setItem("droneAlarm.seen", JSON.stringify(seen)); }
+let popup=null;   // {kind, level, role}
+function detectEvents(){
+  const inc=active(), r=route();
+  const roles = r==="board" ? BOARD_ROLES : (r==="duty"&&me() ? [me().role] : (r==="room"?["room"]:[]));
+  if(!roles.length) return;
+  if(inc){
+    const top=inc.alerts[inc.alerts.length-1];
+    if(top){ const k=inc.id+":"+top.level; if(!seen[k]){ markSeen(k);
+      const voiceRole = r==="board" ? (prefs().boardVoice||"pilot") : roles[0];
+      const voiceMid = r==="board" ? (boardIds||[])[BOARD_ROLES.indexOf(voiceRole)] : (me()&&me().id);
+      vibrate(VIB[top.level]); beep(top.level, top.level>=3);
+      speak(alertText(inc, top, voiceRole==="room"?null:voiceRole, voiceMid).replace(/·/g,",").replace("[훈련]","훈련."));
+      if(r!=="room") popup={kind:"alert", level:top.level, incId:inc.id}; } }
+  }
+  // 해제 알림
+  const last=S.incidents[0];
+  if(last && last.status==="cleared" && last.clearedAt && Date.now()-last.clearedAt<15000){
+    const k=last.id+":clear"; if(!seen[k]){ markSeen(k); if(seen[last.id+":1"]||r==="room"){ vibrate(VIB.clear); beep(2,false); speak("상황 해제. 대기 상태로 돌아갑니다."); if(r!=="room") popup={kind:"clear", incId:last.id}; } } }
+  if(S.test && !seen["test:"+S.test]){ markSeen("test:"+S.test); if(r!=="room"){ vibrate(VIB.test); beep(1,true); speak("시험 알림입니다."); toast("[시험] 알림 확인"); } }
+}
+
+// ---------------- 렌더링
+let lastRev=-1;
+function onState(){ detectEvents(); if(S.rev!==lastRev){ lastRev=S.rev; render(); } }
+const $app=document.getElementById("app");
+let lastHTML="";
+/** 내용이 바뀐 경우에만 화면을 다시 그린다 (누르는 중인 버튼이 사라지지 않도록) */
+function paint(html, bind){ if(html===lastHTML){ updateLive(); return; } lastHTML=html; $app.innerHTML=html; bind&&bind(); updateLive(); }
+/** 1초마다 바뀌는 값(드론 위치·도착 예상·거리 링)은 그 자리에서 갱신 */
+function updateLive(){ const inc=active();
+  document.querySelectorAll("[data-live=drone]").forEach(el=>{ const t=inc?droneLine(inc):""; if(el.textContent!==t) el.textContent=t; });
+  const e=inc?etaNow(inc):null; document.querySelectorAll("[data-eta]").forEach(el=>el.textContent=e==null?"-":fmtDur(e));
+  document.querySelectorAll("[data-live=igdist]").forEach(el=>{ const m=S.members[el.dataset.mid], g=(S.igloos||[]).find(x=>x.id===el.dataset.gid); if(!m||!g) return;
+    const pos=myPosition(m), d=distM(pos,g); el.textContent=`${dirName(bearingTo(pos,g))}쪽 ${fmtM(d)}`; });
+  document.querySelectorAll("[data-live=igsrc]").forEach(el=>{ const m=S.members[el.dataset.mid]; if(!m) return; const p=myPosition(m);
+    el.textContent = p.src==="gps" ? `내 위치: GPS (오차 약 ${Math.round(p.acc||0)}m)` : p.src==="far" ? "내 위치: GPS가 비행장 기준점에서 멀어 시연용 가상 위치 사용" : "내 위치: 시연용 가상 위치 (GPS 없음)"; });
+  document.querySelectorAll("canvas[data-igmap]").forEach(drawIgMap);
+  drawRings("rings"); drawIgRoom(); drawPhoneMaps(); }
+/** 휴대폰 상황도: 대기 화면은 기지 상황도 전체, 행동 완료 후에는 드론과 내 위치가 함께 보이도록 자동 확대 */
+function pmapHTML(mid, zoom, gid){ return `<canvas class="pmap" data-mid="${mid}" data-zoom="${zoom}" data-gid="${gid||""}" width="640" height="640"></canvas>`; }
+function drawPhoneMaps(){
+  const c=S.center||DEFAULT_CENTER, kx=111320*Math.cos(c.lat*RAD), inc=active();
+  document.querySelectorAll("canvas.pmap").forEach(cv=>{ const m=S.members[cv.dataset.mid]; if(!m) return;
+    const pos=myPosition(m), km=[(pos.lon-c.lon)*kx/1000,(pos.lat-c.lat)*110.57];
+    let maxKm=cv.dataset.zoom==="base"?1.9:12.8; if(cv.dataset.zoom==="auto"){ const dk=inc&&inc.track?(inc.track.center_m??inc.track.distance_m)/1000:12; maxKm=Math.min(12.8,Math.max(1.9,Math.max(dk,Math.hypot(km[0],km[1]))*1.2+0.4)); }
+    const tg=cv.dataset.gid?(S.igloos||[]).find(g=>g.id===cv.dataset.gid):null;
+    drawRings(cv,{maxKm, me:{km, label:m.callsign}, target:tg?[(tg.lon-c.lon)*kx/1000,(tg.lat-c.lat)*110.57]:null}); });
+}
+function band(extra){
+  const inc=active(), sim=S.sim, m=me();
+  const color = inc ? (inc.mode==="real"?"var(--real)":"var(--train)") : "#78909c";
+  const label = inc ? (inc.mode==="real"?"실제 모드":"훈련 모드") : "상황 없음";
+  return `<div class="band" style="background:${color}"><span>${label}</span>${inc&&sim?`<span class="sim">시뮬레이션 ${sim.mult}배속${sim.paused?" · 일시정지":""}</span>`:""}${extra||""}
+    <span class="who">${m&&route()==="duty"?`${ROLES[m.role]} · ${esc(m.callsign)}`:""}</span></div>`;
+}
+function render(){
+  S=load(); const r=route();
+  if(r==="room" || r==="history"){ if(!roomOk()) return renderPin(r); return r==="room"?renderRoom():renderHistory(); }
+  if(r==="board"){ if(!roomOk()) return renderPin("board"); return renderBoard(); }
+  if(r==="duty"){ if(!me()) return go("entry"); return renderDutyPage(); }
+  if(me() && IS_APP && !sessionStorage.getItem("droneAlarm.entryShown")){ sessionStorage.setItem("droneAlarm.entryShown","1"); return go("duty"); }
+  renderEntry();
+}
+
+// ===== 화면 1. 입장
+let entrySel=null;
+function renderEntry(){
+  const m=me();
+  paint(band() + `<div class="wrap" style="max-width:560px">
+   <div class="card" style="background:var(--navy);color:#fff;border:none"><div style="font-size:26px;font-weight:900">드론경보</div>
+     <div style="opacity:.85;margin-top:4px">비행장 드론 위협 경보·행동 지시 (시연용 가상 데이터)</div></div>
+   <div class="card"><h3>직능 선택</h3><div class="rolebtns">
+     ${Object.entries(ROLES).map(([k,v])=>`<button data-role="${k}" class="${entrySel===k?"sel":""}">${v}</button>`).join("")}</div>
+     <div style="margin-top:12px" id="csWrap" ${entrySel&&entrySel!=="room"?"":'hidden'}><div class="muted">호출부호 (가상 이름)</div>
+       <input id="cs" style="width:100%;margin-top:4px" placeholder="예: 독수리1" value="${esc(defaultCallsign(entrySel))}"></div>
+     <button class="pri" id="enter" style="width:100%;margin-top:12px;height:54px;font-size:19px" ${entrySel?"":"disabled"}>${entrySel==="room"?"상황실 PIN 입력":"입장"}</button>
+     ${m?`<div class="muted" style="margin-top:8px">이 기기 최근 입장: ${ROLES[m.role]} · ${esc(m.callsign)} <a href="#/duty">바로 가기</a></div>`:""}
+   </div>
+   <div class="card"><h3>알림</h3><div class="row"><button id="testN">알림 시험 (진동·소리·음성)</button>
+     <label class="row" style="gap:6px"><input type="checkbox" id="voice" ${prefs().voice?"checked":""}> 음성 안내</label></div>
+     <div class="muted" style="margin-top:6px">${IS_APP?"앱이 켜져 있는 동안 화면이 꺼지지 않으며, 경보 시 진동·경보음·음성으로 알립니다.":"PC 브라우저에서는 소리·음성으로 알립니다. 처음 한 번 아무 버튼이나 눌러야 소리가 납니다."}</div></div>
+   <div class="card"><h3>PC 시연</h3><div class="muted">상황실과 휴대폰 4대(조종사·관제사·정비사·방호관계자)를 한 화면에 띄웁니다.</div>
+     <button id="toBoard" style="margin-top:8px">시연 보드 열기 (상황실 PIN 필요)</button></div>
+   <div class="card"><h3>설치·사용 안내</h3><div class="muted" style="line-height:1.6">
+     · 갤럭시: <b>드론경보.apk</b> 파일을 휴대폰으로 보내 실행 → "출처를 알 수 없는 앱" 허용 → 설치<br>
+     · 배터리: 설정 ▸ 애플리케이션 ▸ 드론경보 ▸ 배터리 ▸ <b>제한 없음</b><br>
+     · 서버 없이 동작합니다. 휴대폰 한 대로 시연할 때는 행동 화면의 <b>단독 시연</b>을 쓰세요.<br>
+     · 상황실 기본 PIN: <b>1234</b> (상황실 화면에서 변경)</div></div></div>`, bindEntry);
+}
+function bindEntry(){
+  $app.querySelectorAll("[data-role]").forEach(b=>b.onclick=()=>{ unlockAudio(); entrySel=b.dataset.role; renderEntry(); });
+  const e=document.getElementById("enter"); e.onclick=()=>{ unlockAudio();
+    if(entrySel==="room") return go("room");
+    const cs=(document.getElementById("cs").value||"").trim(); if(!cs) return toast("호출부호를 입력하세요");
+    const id=apiMember(entrySel, cs); setMe(id); go("duty"); };
+  document.getElementById("testN").onclick=()=>{ unlockAudio(); vibrate(VIB.test); beep(2,true); speak("알림 시험입니다. 진동과 소리를 확인하세요."); toast("알림 시험"); };
+  document.getElementById("voice").onchange=e=>setPref("voice",e.target.checked);
+  document.getElementById("toBoard").onclick=()=>{ unlockAudio(); go("board"); };
+}
+function defaultCallsign(role){ return {pilot:"독수리1",controller:"관제1",maintenance:"정비1",security:"방호1"}[role]||""; }
+
+// ===== 상황실 PIN
+let pinFail=+(sessionStorage.getItem("droneAlarm.pinFail")||0), pinLockUntil=+(sessionStorage.getItem("droneAlarm.pinLock")||0);
+function renderPin(next){
+  const locked=Date.now()<pinLockUntil;
+  paint(band() + `<div class="wrap" style="max-width:420px"><div class="card"><h3>상황실 PIN</h3>
+    <input id="pin" type="password" inputmode="numeric" maxlength="4" style="width:100%;font-size:28px;letter-spacing:10px;text-align:center" ${locked?"disabled":""}>
+    <button class="pri" id="pinGo" style="width:100%;margin-top:10px;height:50px" ${locked?"disabled":""}>확인</button>
+    <div class="muted" style="margin-top:8px">${locked?`5회 틀려 1분간 잠겼습니다.`:`기본 PIN은 1234입니다.`}</div>
+    <a href="#/entry" class="muted">← 입장 화면</a></div></div>` + (pinFail?`<!--${pinFail}-->`:""), ()=>bindPin(next));
+}
+function bindPin(next){
+  const go2=()=>{ const v=document.getElementById("pin").value;
+    if(v===S.settings.pin){ sessionStorage.setItem("droneAlarm.room",Date.now()); if(IS_APP) localStorage.setItem("droneAlarm.roomT",Date.now()); pinFail=0; sessionStorage.setItem("droneAlarm.pinFail",0); render(); }
+    else { pinFail++; sessionStorage.setItem("droneAlarm.pinFail",pinFail); if(pinFail>=5){ pinLockUntil=Date.now()+60000; sessionStorage.setItem("droneAlarm.pinLock",pinLockUntil); pinFail=0; setTimeout(render,60500);} toast("PIN이 틀렸습니다"); lastHTML=""; renderPin(next); } };
+  const b=document.getElementById("pinGo"); if(b) b.onclick=go2;
+  const i=document.getElementById("pin"); if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==="Enter") go2(); }; }
+}
+
+// ===== 공통 조각: 거리 링, 현재 상황
+function ringsHTML(id){ return `<canvas id="${id}" width="800" height="800"></canvas>`; }
+function drawRings(id, opt){ opt=opt||{};
+  const cv=typeof id==="string"?document.getElementById(id):id; if(!cv) return; const x=cv.getContext("2d"), W=cv.width, c=W/2;
+  const inc=active(), lv=inc?inc.level:0, maxKm=opt.maxKm||12.8, px=(W/2-14)/maxKm, small=W<700;
+  const K=(ex,ny)=>[c+ex*px, c-ny*px];                 // km(동,북) → 화면
+  const rot=(RWY.hdg-90)*Math.PI/180, hk=RWY.half/1000;
+  const poly=(pts,fill,stroke,lw)=>{ x.beginPath(); pts.forEach((q,i)=>{ const p=K(q[0],q[1]); i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }); x.closePath(); if(fill){x.fillStyle=fill;x.fill();} if(stroke){x.strokeStyle=stroke;x.lineWidth=lw||2;x.stroke();} };
+  const line=(pts,col,lw)=>{ x.beginPath(); pts.forEach((q,i)=>{ const p=K(q[0],q[1]); i?x.lineTo(p[0],p[1]):x.moveTo(p[0],p[1]); }); x.strokeStyle=col; x.lineWidth=lw; x.lineCap="round"; x.lineJoin="round"; x.stroke(); };
+  // 바탕 지형 (모식도)
+  x.fillStyle="#1d3326"; x.fillRect(0,0,W,W);
+  [[[-13,13],[13,13],[13,7.5],[6,9],[0,8.2],[-6,9.5],[-13,8]],            // 북쪽 산지
+   [[4,-13],[13,-13],[13,-6],[9,-7.5],[6,-9.5]], [[-13,-13],[-6,-13],[-8,-9],[-13,-8]]]
+   .forEach(pg=>poly(pg,"#264a33"));
+  [[3,11],[8,10.5],[-5,11],[10,-10],[-10,-11]].forEach(([ex,ny])=>{ const p=K(ex,ny); x.fillStyle="#2f5a3d"; x.beginPath(); x.moveTo(p[0]-34,p[1]+20); x.lineTo(p[0],p[1]-26); x.lineTo(p[0]+34,p[1]+20); x.fill(); });
+  poly([[-13,4],[-3.2,3.2],[-2.4,-2],[-1.5,-6],[-4,-13],[-13,-13]],"#3a4350");      // 시가지(서·남서)
+  poly([[1.6,-2.6],[6,-2],[7,-6],[2.5,-7.5]],"#363f4a");                            // 시가지(남동)
+  x.save(); x.globalAlpha=.35; x.strokeStyle="#59636f"; x.lineWidth=1;
+  for(let gx=-13;gx<0;gx+=0.8) line([[gx,-13],[gx,3.5]],"#4a5562",1); for(let gy=-13;gy<4;gy+=0.8) line([[-13,gy],[-2,gy]],"#4a5562",1); x.restore();
+  line([[13,6.2],[8,4.6],[4,5.2],[1,3.6],[-2,4.3],[-6,3],[-10,3.8],[-13,2.6]],"#2f7fb8",9);   // 하천
+  line([[-13,6],[-5,5.6],[0,6.1],[6,6.9],[13,7.4]],"#8d8a6f",4);                            // 고속도로
+  line([[-13,-3.5],[-5,-2.6],[-1.6,-2.4],[2,-3.2],[13,-3.8]],"#8d8a6f",3);
+  // 비행장 부지·활주로 2본·유도로·계류장
+  x.save(); x.translate(c,c); x.rotate(rot);
+  x.fillStyle="#3f5a44"; x.beginPath(); (x.roundRect?x.roundRect(-(hk+0.7)*px,-1.3*px,(hk+0.7)*2*px,2.6*px,10):x.rect(-(hk+0.7)*px,-1.3*px,(hk+0.7)*2*px,2.6*px)); x.fill();
+  x.strokeStyle="#c9d3c0"; x.setLineDash([6,6]); x.lineWidth=1.5; x.stroke(); x.setLineDash([]);
+  const sep=RWY.sep/1000;
+  const detail=maxKm<=4.5;
+  if(detail) [-sep/2,sep/2].forEach(o=>{ const L=hk*px, y=o*px, wd=Math.max(12,0.05*px); x.fillStyle="#3a3a3a"; x.fillRect(-L,y-wd/2,2*L,wd);
+    x.strokeStyle="#fff"; x.lineWidth=3; x.strokeRect(-L,y-wd/2,2*L,wd); x.setLineDash([14,10]); x.lineWidth=2.5; x.beginPath(); x.moveTo(-L+24,y); x.lineTo(L-24,y); x.stroke(); x.setLineDash([]);
+    if(o<0) [[-L-22,Math.PI/2,"13"],[L+22,-Math.PI/2,"31"]].forEach(([tx,ra,tt])=>{ x.save(); x.fillStyle="#fff"; x.font="bold 22px sans-serif"; x.textAlign="center"; x.translate(tx,0); x.rotate(ra); x.fillText(tt,0,8); x.restore(); }); });
+  else [-sep/2,sep/2].forEach(o=>{ x.fillStyle="#2b2b2b"; x.fillRect(-hk*px,(o-0.03)*px,hk*2*px,0.06*px+3); x.strokeStyle="#fff"; x.lineWidth=1; x.setLineDash([5,5]); x.beginPath(); x.moveTo(-hk*px+6,o*px+1); x.lineTo(hk*px-6,o*px+1); x.stroke(); x.setLineDash([]); });
+  x.fillStyle="#555"; x.fillRect(-hk*px,(sep/2+0.25)*px,hk*2*px,2.5);                       // 유도로
+  x.fillStyle="#6d6d6d"; x.fillRect(-0.7*px,(sep/2+0.45)*px,1.4*px,0.35*px);              // 계류장
+  x.restore();
+  // 이글루(가상 배치) 표시
+  const cc=S.center||DEFAULT_CENTER, kx=111320*Math.cos(cc.lat*RAD);
+  if(detail) (S.igloos||[]).forEach(g=>{ const p=K((g.lon-cc.lon)*kx/1000,(g.lat-cc.lat)*110.57), r=9; x.fillStyle=iglooStatus(g)[1];
+      x.beginPath(); x.arc(p[0],p[1]-4,r,Math.PI,0); x.lineTo(p[0]+r,p[1]+7); x.lineTo(p[0]-r,p[1]+7); x.fill(); x.strokeStyle="#fff"; x.lineWidth=2; x.stroke();
+      x.font="bold 17px sans-serif"; const nm=g.name.replace("이글루 ",""), gw=x.measureText(nm).width; x.fillStyle="rgba(0,0,0,.55)"; x.fillRect(p[0]-gw/2-3,p[1]+9,gw+6,19); x.fillStyle="#fff"; x.fillText(nm,p[0]-gw/2,p[1]+24); });
+  else if(!S.customIgloos) (S.igloos||[]).forEach(g=>{ const p=K((g.lon-cc.lon)*kx/1000,(g.lat-cc.lat)*110.57); x.fillStyle=iglooStatus(g)[1]; x.beginPath(); x.arc(p[0],p[1],4,Math.PI,0); x.fill(); });
+  // 경보선: 활주로를 장축으로 하는 타원
+  [[10,1],[5,2],[3,3],[0.5,4]].forEach(([km,l])=>{ const L=LEVELS[l], on=lv===l;
+    x.beginPath(); x.ellipse(c,c,(km+hk)*px,km*px,rot,0,Math.PI*2); x.fillStyle=L.color+(on?"30":"10"); x.fill();
+    x.lineWidth=on?6:2.5; x.setLineDash(on?[]:[14,10]); x.strokeStyle=L.color; x.stroke(); x.setLineDash([]);
+    if(km>=3){ const t=rot-Math.PI/2, p=[c+Math.cos(t)*km*px, c+Math.sin(t)*km*px];  // 단축 방향(북동) 끝에 표시
+      x.font="bold 24px sans-serif"; const s2=`${km}km ${L.name}`, w=x.measureText(s2).width; x.fillStyle="rgba(0,0,0,.55)"; x.fillRect(p[0]+4,p[1]-24,w+10,30); x.fillStyle=L.color; x.fillText(s2,p[0]+9,p[1]-2); } });
+  const p05=[c+Math.cos(rot)*(0.5+hk)*px, c+Math.sin(rot)*(0.5+hk)*px]; x.font="bold 18px sans-serif"; x.fillStyle=LEVELS[4].color==="#8e0000"?"#ff8a80":LEVELS[4].color; x.fillText("0.5km 심각",p05[0]+6,p05[1]+18);
+  // 방위·범례
+  x.fillStyle="#fff"; x.font="bold 26px sans-serif"; x.textAlign="center"; x.fillText("N",c,28); x.beginPath(); x.moveTo(c,36); x.lineTo(c-9,54); x.lineTo(c+9,54); x.fill();
+  if(!detail){ x.font="bold 18px sans-serif"; x.fillText("비행장",c-60,c-40); } x.textAlign="left";
+  x.font="15px sans-serif"; x.fillStyle="rgba(0,0,0,.5)"; x.fillRect(10,W-34,330,26); x.fillStyle="#e0e0e0"; x.fillText("활주로 13/31 기준 타원 경보선 · 지형은 모식도(가상)",16,W-15);
+  // 가상 표적: 지나온 항적 + 예상 경로 + 정보 상자(속도·거리·도착 예상)
+  if(inc&&inc.track){ const t=inc.track, b=t.bearing_deg*Math.PI/180, cm=(t.center_m!=null?t.center_m:t.distance_m)/1000, sm=(inc.startCenter_m||t.center_m||t.distance_m)/1000;
+    const at=km=>[c+Math.sin(b)*km*px, c-Math.cos(b)*km*px], lim=W/2-30, rk=Math.min(cm, lim/px/Math.max(Math.abs(Math.sin(b)),Math.abs(Math.cos(b)))), p=at(rk), s0=at(Math.min(sm,maxKm+1)), col=LEVELS[Math.max(1,lv)].color;
+    // 예상 경로 (현재 → 활주로 중앙)
+    x.strokeStyle="rgba(255,255,255,.75)"; x.lineWidth=2.5; x.setLineDash([10,9]); x.beginPath(); x.moveTo(p[0],p[1]); x.lineTo(c,c); x.stroke(); x.setLineDash([]);
+    // 지나온 항적 (출발 → 현재) + 1km 눈금
+    x.strokeStyle=col; x.lineWidth=6; x.lineCap="round"; x.beginPath(); x.moveTo(s0[0],s0[1]); x.lineTo(p[0],p[1]); x.stroke();
+    x.fillStyle="#fff"; for(let k=Math.ceil(cm);k<=Math.min(sm,maxKm);k++){ const q=at(k); x.beginPath(); x.arc(q[0],q[1],3.5,0,7); x.fill(); }
+    // 진행 방향 화살표
+    const hd=[-Math.sin(b),Math.cos(b)], hx=p[0]+hd[0]*34, hy=p[1]+hd[1]*34; x.fillStyle="#fff"; x.save(); x.translate(hx,hy); x.rotate(Math.atan2(hd[1],hd[0])); x.beginPath(); x.moveTo(12,0); x.lineTo(-6,-9); x.lineTo(-6,9); x.fill(); x.restore();
+    // 드론 기호
+    x.fillStyle=col; x.beginPath(); x.arc(p[0],p[1],16,0,7); x.fill(); x.lineWidth=4; x.strokeStyle="#fff"; x.stroke();
+    x.lineWidth=2; [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([dx,dy])=>{ x.beginPath(); x.arc(p[0]+dx*13,p[1]+dy*13,6,0,7); x.stroke(); });
+    // 정보 상자
+    const eta=etaNow(inc), lines=[[`${t.speed_kmh}km/h · ${SPEED_NAME[speedClass(t.speed_kmh)]}`,"#fff"],[`활주로 중앙 ${cm.toFixed(2)}km`,"#fff"],[`도착 예상 ${eta==null?"-":fmtDur(eta)}`,"#ffeb3b"]];
+    if(opt.me){ const dk=Math.hypot(Math.sin(b)*cm-opt.me.km[0], Math.cos(b)*cm-opt.me.km[1]); lines.push([`나와의 거리 ${dk.toFixed(2)}km`,"#80d8ff"]); }
+    x.font="bold 25px sans-serif"; const bw=Math.max(...lines.map(l=>x.measureText(l[0]).width))+24, bh=lines.length*32+14;
+    let bx=p[0]+(Math.sin(b)>=0?30:-30-bw), by=p[1]-bh/2; if(Math.abs(Math.sin(b))<0.35){ bx=p[0]+30; } bx=Math.min(Math.max(bx,8),W-bw-8); by=Math.min(Math.max(by,60),W-bh-44);
+    if(Math.abs(bx-p[0])<bw && Math.abs(by+bh/2-p[1])<bh/2+20) by = p[1]<c ? p[1]+28 : p[1]-bh-28;
+    x.fillStyle="rgba(0,0,0,.78)"; x.strokeStyle=col; x.lineWidth=3; x.beginPath(); (x.roundRect?x.roundRect(bx,by,bw,bh,10):x.rect(bx,by,bw,bh)); x.fill(); x.stroke();
+    lines.forEach((l,i)=>{ x.fillStyle=l[1]; x.fillText(l[0],bx+12,by+36+i*32); });
+    x.strokeStyle=col; x.lineWidth=2; x.beginPath(); x.moveTo(p[0],p[1]); x.lineTo(Math.min(Math.max(p[0],bx),bx+bw),Math.min(Math.max(p[1],by),by+bh)); x.stroke(); }
+  // 내 이글루까지 경로
+  if(opt.me&&opt.target){ const a=K(opt.me.km[0],opt.me.km[1]), t2=K(opt.target[0],opt.target[1]);
+    x.strokeStyle="#ffeb3b"; x.lineWidth=5; x.setLineDash([12,8]); x.beginPath(); x.moveTo(a[0],a[1]); x.lineTo(t2[0],t2[1]); x.stroke(); x.setLineDash([]);
+    x.strokeStyle="#ffeb3b"; x.lineWidth=4; x.beginPath(); x.arc(t2[0],t2[1]-2,24,0,7); x.stroke(); }
+  // 내 위치
+  if(opt.me){ const p=K(opt.me.km[0],opt.me.km[1]), q=[Math.min(Math.max(p[0],18),W-18),Math.min(Math.max(p[1],18),W-18)], out=q[0]!==p[0]||q[1]!==p[1];
+    x.fillStyle="rgba(33,150,243,.25)"; x.beginPath(); x.arc(q[0],q[1],34,0,7); x.fill();
+    x.fillStyle="#2196f3"; x.beginPath(); x.arc(q[0],q[1],17,0,7); x.fill(); x.strokeStyle="#fff"; x.lineWidth=4; x.stroke();
+    x.fillStyle="#fff"; x.beginPath(); x.arc(q[0],q[1]-6,5,0,7); x.fill(); x.beginPath(); x.moveTo(q[0]-8,q[1]+10); x.quadraticCurveTo(q[0],q[1]-4,q[0]+8,q[1]+10); x.fill();
+    x.font="bold 26px sans-serif"; const lab=`나 · ${opt.me.label}${out?" (화면 밖)":""}`, tw=x.measureText(lab).width; let lx=q[0]-tw/2, ly=q[1]+(q[1]>W-80?-44:56); lx=Math.min(Math.max(lx,6),W-tw-14);
+    x.fillStyle="#1565c0"; x.fillRect(lx-6,ly-26,tw+12,34); x.strokeStyle="#fff"; x.lineWidth=2; x.strokeRect(lx-6,ly-26,tw+12,34); x.fillStyle="#fff"; x.fillText(lab,lx,ly); }
+}
+/** 예상 도착 시간: 실제 환산 시간, 카운트다운은 배속만큼 빠르게 */
+function etaNow(inc){ if(!inc||!inc.track) return null; const t=inc.track, mult=(S.sim&&S.sim.incidentId===inc.id)?(S.sim.paused?0:S.sim.mult):inc.simMult||1;
+  return Math.max(0, (t.center_m!=null?t.center_m:t.distance_m)/(t.speed_kmh/3.6) - (Date.now()-t.at)/1000*mult); }
+function droneLine(inc){ const t=inc.track; if(!t) return "탐지 대기"; return `${SPEED_NAME[speedClass(t.speed_kmh)]} · ${bearingName(t.bearing_deg)} · 활주로 중앙 ${((t.center_m!=null?t.center_m:t.distance_m)/1000).toFixed(1)}km · ${t.speed_kmh}km/h`; }
+
+// ===== 화면 3. 직능 행동 화면 (memberId 기준으로 그려서 시연 보드에서도 재사용)
+function dutyHTML(mid, compact){
+  const m=S.members[mid]; if(!m) return "";
+  const inc=active(), last=S.incidents[0];
+  if(!inc){
+    const cleared = last && last.status==="cleared" && last.clearedAt>(S.resetAt||0) && last.alerts.length;
+    return `<div class="idlebg"><div class="idlemap">${pmapHTML(mid,"full")}<div class="idleover"><b>경보 없음</b> · ${ROLES[m.role]} ${esc(m.callsign)}</div></div><div style="padding:10px 12px">${cleared?`<div class="donebox" style="background:#e3f2fd;color:#1565c0">상황 해제</div><div style="height:10px"></div>`:""}
+      ${openTaskCard(m)}
+      <div class="pmapbox" style="margin-top:0"><div class="pmapt">비행장 상세 · 활주로·이글루·내 위치</div>${pmapHTML(mid,"base")}</div>
+      <div class="card" style="margin-top:10px"><div class="muted">알림: ${IS_APP?"진동·경보음·음성 켜짐":"소리·음성 켜짐"} · 대기 중</div>
+      ${compact?"":`<div class="row" style="margin-top:10px"><button data-act="test">알림 시험</button><a href="#/entry">직능 변경</a></div>`}</div>
+      ${compact?"":soloPanel()}</div></div>`;
+  }
+  const lv=inc.level;
+  if(lv===0) return `<div style="padding:12px"><div class="lvbanner" style="background:#78909c"><div class="t">탐지 중</div><div data-live="drone"></div></div><div class="pmapbox">${pmapHTML(mid,"auto")}</div>${compact?"":soloPanel()}</div>`;
+  const pos=myPosition(m), ig=(m.role==="pilot"||m.role==="maintenance")?myIgloo(m,pos):null;
+  const L=LEVELS[lv], itemsK=procItems(lv,m.role,ig?ig.name:null), items=itemsK.map(x=>x.text), checks=(inc.checks[mid+":"+lv]||[]).slice();
+  itemsK.forEach((x,i)=>{ if(x.kind&&iglooDone(m,x.kind)) checks[i]=true; });
+  const ack=inc.acks.find(a=>a.level===lv&&a.memberId===mid);
+  const prevMissing=[]; for(let l=1;l<lv;l++){ if(inc.alerts.some(a=>a.level===l)&&!inc.acks.some(a=>a.level===l&&a.memberId===mid)) prevMissing.push(l); }
+  const allOn=items.every((_,i)=>checks[i]);
+  const eta=etaNow(inc);
+  return `<div style="padding:12px">
+    <div class="lvbanner ${lv===4?"blink":""}" style="background:${L.color};color:${L.text}">
+      <div class="t">${inc.mode==="training"?"[훈련] ":""}${lv}단계 ${L.name}</div>
+      <div style="font-weight:700;margin-top:4px" data-live="drone"></div>
+      <div class="row" style="margin-top:6px"><span>도착 예상</span><span class="eta" data-eta="1"></span></div></div>
+    ${prevMissing.length?`<div class="prevwarn">이전 단계 미완료: ${prevMissing.map(l=>l+"단계").join(", ")}</div>`:""}
+    ${iglooCard(m, ig)}
+    ${lv>=2?`<div class="pmapbox" style="margin-top:10px"><div class="pmapt">이글루 위치 · 내 위치 · 드론 (5km 이내)</div>${pmapHTML(mid,"base",ig?ig.id:"")}</div>`:""}
+    <div style="margin:12px 0 6px;font-weight:900;font-size:17px">${ROLES[m.role]} 행동 지시</div>
+    ${items.map((t,i)=>`<div class="chk ${checks[i]||ack?"on":""}" data-chk="${i}" data-mid="${mid}" data-lv="${lv}"><span class="box">✓</span><span>${i+1}. ${esc(t)}</span></div>`).join("")}
+    ${ack?`<div class="donebox">완료 · ${ack.elapsed}초</div>${lv>=2?"":`<div class="pmapbox"><div class="pmapt">상황도 · 드론 이동과 내 위치</div>${pmapHTML(mid,"auto")}</div>`}`
+         :`<button class="okb bigok" data-ack="${mid}" data-lv="${lv}" ${allOn?"":"disabled"}>${allOn?"완료":"모든 항목을 체크하세요"}</button>`}
+    ${compact?"":soloPanel()}</div>`;
+}
+/** 3단계 이상: 이글루 안내 카드 (조종사: 배정·입고 / 정비사: 대피·Close) */
+function iglooCard(m, g){
+  const inc=active(); if(!inc||inc.level<3||(m.role!=="pilot"&&m.role!=="maintenance")) return "";
+  if(!g) return `<div class="igcard" style="border-color:#c62828"><div class="igt">대피 가능한 빈 이글루가 없습니다</div><div class="muted">상황실에 즉시 보고하고 가까운 건물로 엄폐하세요.</div></div>`;
+  const st=iglooStatus(g);
+  let btns="";
+  if(m.role==="pilot"){
+    btns = g.aircraftBy===m.id ? `<div class="donebox" style="font-size:17px">${esc(g.name)} 입고 완료</div>`
+      : `<div class="row"><button class="okb" style="flex:1;height:56px;font-size:18px" data-igarrive="${m.id}">도착·입고 완료</button><button data-igother="${m.id}" data-gid="${g.id}" style="height:56px">다른 이글루</button></div>`;
+  } else {
+    const inIt=(g.evac||[]).includes(m.id);
+    btns = !inIt ? `<button class="okb" style="width:100%;height:56px;font-size:18px" data-igenter="${m.id}" data-gid="${g.id}">입실 (대피 완료)</button>`
+      : g.closed ? `<div class="donebox" style="font-size:17px">${esc(g.name)} Close 완료 · ${fmtClock(g.closedAt)}</div>`
+      : `<button class="dang" style="width:100%;height:56px;font-size:19px;font-weight:900" data-igclose="${m.id}" data-gid="${g.id}">🔒 Close 완료 (문 닫음)</button>`;
+  }
+  return `<div class="igcard"><div class="row" style="justify-content:space-between"><span class="igt">${m.role==="pilot"?"배정 이글루":"대피 이글루"}: ${esc(g.name)}</span><span class="tag" style="background:${st[1]}">${st[0]}</span></div>
+    <div class="igdist" data-live="igdist" data-mid="${m.id}" data-gid="${g.id}"></div>
+    <div class="muted" data-live="igsrc" data-mid="${m.id}" style="margin:4px 0 8px"></div>${btns}</div>`;
+}
+/** 상황 해제 후: 정비사가 닫은(대피한) 이글루 개방 */
+function openTaskCard(m){
+  if(m.role!=="maintenance") return "";
+  const pend=(S.igloos||[]).filter(g=>g.closed&&(g.closedBy===m.id||(g.evac||[]).includes(m.id)));
+  return pend.map(g=>`<div class="igcard" style="border-color:#1565c0"><div class="igt">상황 해제 · ${esc(g.name)} 개방</div>
+    <div class="muted" style="margin:4px 0 10px">이글루 안팎 이상 유무를 확인한 뒤 문을 엽니다. (닫은 시각 ${fmtClock(g.closedAt)})</div>
+    <button class="okb" style="width:100%;height:56px;font-size:19px" data-igopen="${m.id}" data-gid="${g.id}">🔓 Open 완료 (문 엶)</button></div>`).join("");
+}
+/** 이글루 미니 지도: 내 위치 → 목표 이글루 */
+function drawIgMap(cv){
+  const m=S.members[cv.dataset.igmap]; if(!m) return; const g=(S.igloos||[]).find(x=>x.id===cv.dataset.gid); if(!g) return;
+  const pos=myPosition(m), x=cv.getContext("2d"), W=cv.width, H=cv.height;
+  const pts=(S.igloos||[]).concat([pos]); const near=(S.igloos||[]).filter(q=>distM(pos,q)<Math.max(600,distM(pos,g)*1.6)).concat([pos,g]);
+  const lat0=pos.lat, lon0=pos.lon, k=111320*Math.cos(lat0*RAD);
+  const xs=near.map(p=>(p.lon-lon0)*k), ys=near.map(p=>(p.lat-lat0)*110570);
+  const span=Math.max(120, ...xs.map(Math.abs), ...ys.map(Math.abs))*1.25, sc=Math.min(W,H)/2/span;
+  const P=p=>[W/2+(p.lon-lon0)*k*sc, H/2-(p.lat-lat0)*110570*sc];
+  x.fillStyle="#0b1e33"; x.fillRect(0,0,W,H);
+  const t=P(g); x.strokeStyle="#ffd54f"; x.lineWidth=4; x.setLineDash([12,8]); x.beginPath(); x.moveTo(W/2,H/2); x.lineTo(t[0],t[1]); x.stroke(); x.setLineDash([]);
+  near.forEach(q=>{ if(!q.id) return; const c=P(q), st=iglooStatus(q), sel=q.id===g.id; x.fillStyle=st[1]; x.beginPath(); x.arc(c[0],c[1]-6,sel?16:11,Math.PI,0); x.lineTo(c[0]+(sel?16:11),c[1]+4); x.lineTo(c[0]-(sel?16:11),c[1]+4); x.fill();
+    if(sel){ x.lineWidth=3; x.strokeStyle="#ffd54f"; x.stroke(); } x.fillStyle="#fff"; x.font=(sel?"bold 22px":"16px")+" sans-serif"; x.fillText(q.name.replace("이글루 ","#"),c[0]+18,c[1]+6); });
+  x.fillStyle="#4fc3f7"; x.beginPath(); x.arc(W/2,H/2,10,0,7); x.fill(); x.strokeStyle="#fff"; x.lineWidth=3; x.stroke();
+  x.fillStyle="#fff"; x.font="bold 18px sans-serif"; x.fillText("나",W/2+14,H/2-10); x.fillText("N",W-24,22);
+}
+
+/** 단독 시연: 상황실 없이 이 기기에서 가상 표적을 돌림 */
+function soloPanel(){
+  const inc=active(), mine=S.sim&&S.sim.owner===WIN;
+  if(inc && !mine) return "";
+  return `<div class="card" style="margin-top:14px;background:#f5f7fa"><h3>단독 시연</h3>
+    <div class="muted">상황실 없이 이 기기에서 가상 표적(북쪽 12km, 60km/h 저속)을 돌립니다.</div>
+    ${inc?`<div class="row" style="margin-top:8px"><button data-solo="pause">${S.sim.paused?"재개":"일시정지"}</button><button class="dang" data-solo="clear">상황 해제</button></div>`
+         :`<div class="row" style="margin-top:8px"><select id="soloMult"><option value="10">10배속</option><option value="5">5배속</option><option value="1">1배속</option></select>
+           <button class="pri" data-solo="start">▶ 단독 시연 시작 (훈련)</button></div>`}</div>`;
+}
+function bindDuty(root){
+  root.querySelectorAll("[data-chk]").forEach(el=>el.onclick=()=>{ unlockAudio(); const inc=active(); if(!inc) return;
+    const mid=el.dataset.mid, lv=+el.dataset.lv, i=+el.dataset.chk; if(inc.acks.some(a=>a.level===lv&&a.memberId===mid)) return;
+    const cur=(inc.checks[mid+":"+lv]||[])[i]; setCheck(mid,lv,i,!cur); });
+  root.querySelectorAll("[data-ack]").forEach(el=>el.onclick=()=>{ apiAck(el.dataset.ack, +el.dataset.lv); vibrate([120]); });
+  root.querySelectorAll("[data-igarrive]").forEach(el=>el.onclick=()=>{ apiIglooArrive(el.dataset.igarrive); vibrate([120]); });
+  root.querySelectorAll("[data-igother]").forEach(el=>el.onclick=()=>{ const m=S.members[el.dataset.igother]; apiIglooAssign(m.id, myPosition(m), el.dataset.gid); });
+  root.querySelectorAll("[data-igenter]").forEach(el=>el.onclick=()=>{ apiIglooEnter(el.dataset.igenter, el.dataset.gid); vibrate([120]); });
+  root.querySelectorAll("[data-igclose]").forEach(el=>el.onclick=()=>{ const g=(S.igloos||[]).find(x=>x.id===el.dataset.gid);
+    const doIt=()=>{ apiIglooClose(el.dataset.igclose, el.dataset.gid); vibrate([300]); };
+    if(g&&g.assignedTo&&!g.aircraft) confirmBox(`${mName(S,g.assignedTo)}의 항공기가 아직 ${g.name}에 도착하지 않았습니다. 그래도 닫을까요?`, doIt); else doIt(); });
+  root.querySelectorAll("[data-igopen]").forEach(el=>el.onclick=()=>{ apiIglooOpen(el.dataset.igopen, el.dataset.gid); vibrate([120]); });
+  root.querySelectorAll("[data-act=test]").forEach(el=>el.onclick=()=>{ unlockAudio(); vibrate(VIB.test); beep(2,true); speak("알림 시험입니다."); });
+  root.querySelectorAll("[data-solo]").forEach(el=>el.onclick=()=>{ unlockAudio(); const a=el.dataset.solo;
+    if(a==="start"){ const mult=+(document.getElementById("soloMult")||{value:10}).value; apiStartIncident("training",{startKm:12,speed:60,bearing:0,mult}); }
+    if(a==="pause") mutate(s=>{ if(s.sim) s.sim.paused=!s.sim.paused; });
+    if(a==="clear") confirmBox("상황을 해제할까요?", ()=>apiClear()); });
+}
+function renderDutyPage(){
+  const m=me();
+  popMid=m.id;
+  paint(band() + `<div style="max-width:620px;margin:0 auto">${dutyHTML(m.id,false)}</div>` + popupHTML(m.role), ()=>{ bindDuty($app); bindPopup(); });
+}
+let popMid=null;
+function popupHTML(role, inner){
+  if(!popup) return "";
+  const inc=S.incidents.find(i=>i.id===popup.incId);
+  if(popup.kind==="clear") return `<div class="${inner?"inpop":"overlay"}" data-pop="1"><div class="alertpop" style="background:#1565c0"><div class="t">상황 해제</div><div style="margin-top:8px">대기 상태로 돌아갑니다.</div><button style="margin-top:14px;width:100%">확인</button></div></div>`;
+  if(!inc) return "";
+  const al=inc.alerts.find(a=>a.level===popup.level); if(!al) return "";
+  const L=LEVELS[al.level];
+  return `<div class="${inner?"inpop":"overlay"}" data-pop="1"><div class="alertpop ${al.level===4?"lvbanner blink":""}" style="background:${L.color};color:${L.text}">
+    <div style="font-weight:700">${inc.mode==="training"?"[훈련] ":""}새 경보</div><div class="t">${al.level}단계 ${L.name}</div>
+    <div style="margin-top:8px;font-size:17px;line-height:1.5">${esc(alertText(inc, al, role, popMid))}</div>
+    <button style="margin-top:14px;width:100%;height:52px;font-size:18px;font-weight:900">행동 지시 보기</button></div></div>`;
+}
+function bindPopup(){ document.querySelectorAll("[data-pop]").forEach(el=>el.onclick=()=>{ popup=null; render(); }); }
+
+// ===== 화면 2. 상황실
+let roomCfg={mode:"training", startKm:12, speed:60, bearing:0, mult:10};
+function roleTable(inc, roles){
+  if(!inc) return `<div class="muted">진행 중인 상황이 없습니다.</div>`;
+  const lv=inc.level, now=Date.now();
+  const rows=(roles||DUTY_ROLES).map(role=>{
+    const mem=Object.values(S.members).filter(m=>m.role===role&&(now-m.lastSeen<30000||inc.acks.some(a=>a.memberId===m.id)));
+    const done=mem.filter(m=>inc.acks.some(a=>a.level===lv&&a.memberId===m.id)).length;
+    const people=mem.map(m=>{ const a=inc.acks.find(x=>x.level===lv&&x.memberId===m.id);
+      const miss=[]; for(let l=1;l<lv;l++) if(!inc.acks.some(x=>x.level===l&&x.memberId===m.id)) miss.push(l);
+      return `<div>${esc(m.callsign)} · ${lv===0?"-":a?`<b style="color:var(--ok)">완료 ${a.elapsed}초</b>`:`<b style="color:var(--real)">미완료</b>`}${miss.length?` <span class="tag" style="background:#e65100">미완료(격상) ${miss.join("·")}단계</span>`:""}</div>`; }).join("");
+    return `<tr><td><b>${ROLES[role]}</b></td><td style="white-space:nowrap"><b>${done}</b> / ${mem.length}</td><td>${people||'<span class="muted">접속 없음</span>'}</td></tr>`; }).join("");
+  return `<table><tr><th>직능</th><th>완료/접속</th><th>개인별 (현재 ${lv}단계)</th></tr>${rows}</table>`;
+}
+function roomStatusHTML(inc){
+  if(!inc) return `<div class="lvbanner" style="background:#78909c"><div class="t">상황 없음</div><div>가상 표적을 시작하면 상황이 만들어집니다.</div></div>`;
+  const L=LEVELS[inc.level], eta=etaNow(inc);
+  return `<div class="lvbanner ${inc.level===4?"blink":""}" style="background:${L.color};color:${L.text}">
+    <div class="t">${inc.level?`${inc.level}단계 ${L.name}`:"탐지 중"}</div><div style="font-weight:700;margin-top:4px" data-live="drone"></div>
+    <div class="row" style="margin-top:4px"><span>도착 예상</span><span class="eta" data-eta="1"></span></div></div>`;
+}
+function timelineHTML(inc){
+  if(!inc||!inc.alerts.length) return `<div class="muted">발령된 경보 없음</div>`;
+  return `<table><tr><th>단계</th><th>발령 시각</th><th>거리</th><th>도착 예상</th><th>알림 대상</th></tr>${inc.alerts.map(a=>`<tr><td><span class="tag" style="background:${LEVELS[a.level].color};color:${LEVELS[a.level].text}">${a.level}단계 ${LEVELS[a.level].name}</span></td><td>${fmtClock(a.issuedAt)}</td><td>${(a.distance_m/1000).toFixed(2)}km</td><td>${fmtDur(a.eta_sec)}</td><td>${(a.targets||[]).length}명</td></tr>`).join("")}</table>`;
+}
+function iglooPanelHTML(){
+  const gs=S.igloos||[], cnt=k=>gs.filter(g=>iglooStatus(g)[0].startsWith(k)).length;
+  return `<div class="card"><h3>이글루 상태 (${gs.length}개 · 가상 배치 기본값)</h3>
+   <div class="row" style="gap:6px;margin-bottom:8px">${["비어 있음","배정","항공기 입고","대피","닫힘","사용 불가"].map(k=>`<span class="tag" style="background:${({"비어 있음":"#2e7d32","배정":"#ef6c00","항공기 입고":"#1565c0","대피":"#6a1b9a","닫힘":"#37474f","사용 불가":"#9e9e9e"})[k]}">${k} ${cnt(k)}</span>`).join("")}</div>
+   <canvas id="igroom" width="${route()==="board"?600:900}" height="${route()==="board"?560:720}" style="max-width:100%"></canvas>
+   <table style="margin-top:8px"><tr><th>이글루</th><th>상태</th><th>배정·입고</th><th>대피 인원</th><th>Close</th><th></th></tr>
+   ${gs.map(g=>{ const st=iglooStatus(g); return `<tr><td><b>${esc(g.name)}</b></td><td><span class="tag" style="background:${st[1]}">${st[0]}</span></td>
+     <td>${g.assignedTo?esc(mName(S,g.assignedTo))+(g.aircraft?" (입고)":" (이동 중)"):g.aircraft?"항공기 있음":"-"}</td>
+     <td>${(g.evac||[]).map(id=>esc((S.members[id]||{}).callsign||"?")).join(", ")||"-"}</td>
+     <td>${g.closed?`${esc(mName(S,g.closedBy))}<br><span class="muted">${fmtClock(g.closedAt)}</span>`:"-"}</td>
+     <td style="white-space:nowrap">${g.closed?`<button data-igr="open" data-gid="${g.id}">개방 처리</button>`:`<button data-igr="unav" data-gid="${g.id}">${g.unavailable?"사용 가능":"사용 불가"}</button> <button data-igr="ac" data-gid="${g.id}">${g.aircraft?"항공기 없음":"항공기 있음"}</button>`}</td></tr>`; }).join("")}</table>
+   <div class="row" style="margin-top:10px"><button data-igr="addhere">현재 위치에 이글루 추가 (GPS)</button><button data-igr="demohere">내 주변에 시연 배치 만들기 (GPS)</button><button data-igr="virtual">가상 배치로 초기화</button></div>
+   <div class="muted" style="margin-top:6px;line-height:1.5">기본 배치는 시연용 가상 위치입니다. 실제 위치는 각 이글루 앞에서 "현재 위치에 이글루 추가"로 등록하세요(등록 정보는 이 단말에만 저장). 
+     "내 주변에 시연 배치"는 지금 위치를 기준점으로 이글루를 촘촘히 만들어, 비행장 밖에서도 GPS로 시연할 수 있게 합니다.</div></div>`;
+}
+function drawIgRoom(){
+  const cv=document.getElementById("igroom"); if(!cv) return; const x=cv.getContext("2d"), W=cv.width, H=cv.height, c=S.center||DEFAULT_CENTER, gs=S.igloos||[];
+  const k=111320*Math.cos(c.lat*RAD); const ptsAll=gs.map(g=>[(g.lon-c.lon)*k,(g.lat-c.lat)*110570]);
+  const mem = route()==="board" ? (boardIds||[]).map(id=>S.members[id]).filter(Boolean) : [];
+  mem.forEach(m=>{ const p=myPosition(m); ptsAll.push([(p.lon-c.lon)*k,(p.lat-c.lat)*110570]); });
+  if(!S.customIgloos){ const t=(RWY.hdg)*RAD; ptsAll.push([Math.sin(t)*RWY.half,Math.cos(t)*RWY.half],[-Math.sin(t)*RWY.half,-Math.cos(t)*RWY.half]); }
+  const span=Math.max(300,...ptsAll.map(p=>Math.max(Math.abs(p[0])*H/W,Math.abs(p[1]))))*(W<700?1.6:1.4), sc=H/2/span, IR=W<700?10:14;
+  const P=(lat,lon)=>[W/2+(lon-c.lon)*k*sc, H/2-(lat-c.lat)*110570*sc];
+  x.fillStyle="#1d3326"; x.fillRect(0,0,W,H);
+  // 격자(500m)
+  x.strokeStyle="rgba(255,255,255,.07)"; x.lineWidth=1; for(let d=-5000;d<=5000;d+=500){ const gx=W/2+d*sc, gy=H/2+d*sc; x.beginPath(); x.moveTo(gx,0); x.lineTo(gx,H); x.moveTo(0,gy); x.lineTo(W,gy); x.stroke(); }
+  // 활주로: 흰색 윤곽 + 중심선 + 번호
+  if(!S.customIgloos){ x.save(); x.translate(W/2,H/2); x.rotate((RWY.hdg-90)*RAD); const L=RWY.half*sc, wd=Math.max(14,46*sc);
+    x.fillStyle="rgba(255,255,255,.08)"; x.fillRect(-L-30,-RWY.sep*sc/2-wd-24,2*L+60,RWY.sep*sc+2*wd+48);
+    [-RWY.sep/2,RWY.sep/2].forEach(o=>{ const y=o*sc; x.fillStyle="#3a3a3a"; x.fillRect(-L,y-wd/2,2*L,wd);
+      x.strokeStyle="#fff"; x.lineWidth=3; x.strokeRect(-L,y-wd/2,2*L,wd);
+      x.setLineDash([16,12]); x.lineWidth=2.5; x.beginPath(); x.moveTo(-L+34,y); x.lineTo(L-34,y); x.stroke(); x.setLineDash([]);
+      x.lineWidth=2; for(let i=-3;i<=3;i++){ if(!i) continue; const yy=y+i*wd/8; [[-L+4,-L+24],[L-24,L-4]].forEach(([a,b])=>{ x.beginPath(); x.moveTo(a,yy); x.lineTo(b,yy); x.stroke(); }); } });
+    x.fillStyle="#fff"; x.font="bold 22px sans-serif"; x.textAlign="center";
+    x.save(); x.translate(-L-22,0); x.rotate(Math.PI/2); x.fillText("13",0,8); x.restore();
+    x.save(); x.translate(L+22,0); x.rotate(-Math.PI/2); x.fillText("31",0,8); x.restore();
+    x.font="bold 17px sans-serif"; x.fillText("활주로 13/31 (모식)",-L*0.45,-RWY.sep*sc/2-wd/2-10); x.textAlign="left"; x.restore(); }
+  // 방위표 (우상단)
+  { const cx=W-58, cy=62, r=40; x.fillStyle="rgba(0,0,0,.45)"; x.beginPath(); x.arc(cx,cy,r+10,0,7); x.fill(); x.strokeStyle="#fff"; x.lineWidth=2; x.beginPath(); x.arc(cx,cy,r,0,7); x.stroke();
+    x.fillStyle="#e53935"; x.beginPath(); x.moveTo(cx,cy-r+6); x.lineTo(cx-8,cy); x.lineTo(cx+8,cy); x.fill(); x.fillStyle="#fff"; x.beginPath(); x.moveTo(cx,cy+r-6); x.lineTo(cx-8,cy); x.lineTo(cx+8,cy); x.fill();
+    x.font="bold 16px sans-serif"; x.textAlign="center"; x.fillText("N",cx,cy-r-14+12); x.fillText("S",cx,cy+r+4+12-4); x.fillText("E",cx+r+10,cy+6); x.fillText("W",cx-r-10,cy+6); x.textAlign="left"; }
+  // 축척 (좌하단)
+  { const m=[100,200,250,500,1000].find(v=>v*sc>=90)||1000, L=m*sc, bx=16, by=H-20; x.fillStyle="rgba(0,0,0,.5)"; x.fillRect(bx-6,by-26,L+70,36);
+    x.strokeStyle="#fff"; x.lineWidth=3; x.beginPath(); x.moveTo(bx,by-8); x.lineTo(bx,by); x.lineTo(bx+L,by); x.lineTo(bx+L,by-8); x.stroke(); x.fillStyle="#fff"; x.font="15px sans-serif"; x.fillText(m>=1000?m/1000+"km":m+"m",bx+L+8,by+2); }
+  x.fillStyle="#fff"; x.beginPath(); x.arc(W/2,H/2,5,0,7); x.fill(); x.font="15px sans-serif"; x.fillStyle="#cfd8dc"; if(S.customIgloos) x.fillText("기준점",W/2+8,H/2-8);
+  x.font="13px sans-serif"; x.fillStyle="rgba(255,255,255,.6)"; x.fillText("이글루 가상 배치 · 지점은 대략 위치",W-232,H-10);
+  gs.forEach(g=>{ const p=P(g.lat,g.lon), st=iglooStatus(g); x.fillStyle=st[1]; x.beginPath(); x.arc(p[0],p[1]-5,IR,Math.PI,0); x.lineTo(p[0]+IR,p[1]+6); x.lineTo(p[0]-IR,p[1]+6); x.fill();
+    if(g.closed){ x.fillStyle="#fff"; x.font="bold 14px sans-serif"; x.fillText("🔒",p[0]-8,p[1]+2); } x.fillStyle="#fff"; x.font="bold 19px sans-serif"; x.fillText(g.name.replace("이글루 ","#"),p[0]+IR+2,p[1]+6); });
+  mem.forEach(m=>{ const q=myPosition(m), p=P(q.lat,q.lon); x.fillStyle="#4fc3f7"; x.beginPath(); x.arc(p[0],p[1],7,0,7); x.fill(); x.fillStyle="#b3e5fc"; x.font="bold 17px sans-serif"; x.fillText(m.callsign,p[0]+9,p[1]-6); });
+  const OB=[]; gs.forEach(g=>{ const p=P(g.lat,g.lon); OB.push([p[0]-IR-2,p[1]-IR-8,IR*2+40,IR+18]); }); mem.forEach(m=>{ const q=myPosition(m), p=P(q.lat,q.lon); OB.push([p[0]-8,p[1]-22,70,30]); });
+  OB.push([W-112,8,104,110],[0,H-46,250,46]);
+  const hit=(r)=>OB.some(o=>r[0]<o[0]+o[2]&&r[0]+r[2]>o[0]&&r[1]<o[1]+o[3]&&r[1]+r[3]>o[1]);
+  // 주요 지점 (공개 지명, 대략 위치) — 화면 안이면 점, 밖이면 가장자리 화살표
+  if(Math.abs(c.lat-DEFAULT_CENTER.lat)<0.5&&Math.abs(c.lon-DEFAULT_CENTER.lon)<0.5) LANDMARKS.forEach(([name,lat,lon,col])=>{
+    const dx=(lon-c.lon)*k, dy=(lat-c.lat)*110570, dist=Math.hypot(dx,dy), brg=(Math.atan2(dx,dy)/RAD+360)%360, p=P(lat,lon);
+    const lab=`${name} ${dirName(brg)} ${(dist/1000).toFixed(1)}km`; x.font="bold 17px sans-serif"; const tw=x.measureText(lab).width;
+    if(p[0]>20&&p[0]<W-20&&p[1]>20&&p[1]<H-20){ x.fillStyle=col; x.beginPath(); x.moveTo(p[0],p[1]-11); x.lineTo(p[0]+9,p[1]+6); x.lineTo(p[0]-9,p[1]+6); x.fill();
+      const lx=Math.min(Math.max(p[0]+12,6),W-tw-12); x.fillStyle="rgba(0,0,0,.6)"; x.fillRect(lx-4,p[1]-12,tw+8,24); x.fillStyle=col; x.fillText(lab,lx,p[1]+6); OB.push([lx-4,p[1]-12,tw+8,24]); return; }
+    const ux=dx/dist, uy=-dy/dist, m=28, tt=Math.min(ux?((ux>0?W-m:m)-W/2)/ux:1e9, uy?((uy>0?H-m:m)-H/2)/uy:1e9), ex=W/2+ux*tt, ey=H/2+uy*tt;
+    x.save(); x.translate(ex,ey); x.rotate(Math.atan2(uy,ux)); x.fillStyle=col; x.beginPath(); x.moveTo(16,0); x.lineTo(-8,-11); x.lineTo(-8,11); x.fill(); x.restore();
+    let lx0=ex-tw/2, ly0=ey+(uy>0.3?-20:30); lx0=Math.min(Math.max(lx0,6),W-tw-10); if(ux>0.7) lx0=Math.min(lx0,ex-tw-22); if(ux<-0.7) lx0=Math.max(lx0,ex+20); if(Math.abs(ux)>0.7) ly0=ey+6;
+    const side=Math.abs(ux)>0.7; let lx=lx0, ly=ly0;
+    for(const d of [0,-28,28,-56,56,-84,84,-112,112,-140,140,-170,170,-200,200]){ const cx2=side?lx0:Math.min(Math.max(lx0+d*2,6),W-tw-10), cy2=side?Math.min(Math.max(ly0+d,24),H-8):ly0; const r=[cx2-4,cy2-18,tw+8,24]; if(!hit(r)){ lx=cx2; ly=cy2; break; } }
+    OB.push([lx-4,ly-18,tw+8,24]);
+    if(Math.abs(ly-ey-6)>14&&side){ x.strokeStyle=col; x.lineWidth=1.5; x.beginPath(); x.moveTo(ex+(ux<0?10:-10),ey); x.lineTo(ux<0?lx-4:lx+tw+4,ly-6); x.stroke(); }
+    x.fillStyle="rgba(0,0,0,.82)"; x.fillRect(lx-4,ly-18,tw+8,24); x.fillStyle=col; x.fillText(lab,lx,ly); });
+}
+function bindIgRoom(root){
+  root.querySelectorAll("[data-igr]").forEach(b=>b.onclick=()=>{ const a=b.dataset.igr, gid=b.dataset.gid;
+    if(a==="open") return apiIglooOpen(null, gid);
+    if(a==="unav") return mutate(s=>{ const g=s.igloos.find(x=>x.id===gid); if(g) g.unavailable=!g.unavailable; });
+    if(a==="ac") return mutate(s=>{ const g=s.igloos.find(x=>x.id===gid); if(g){ g.aircraft=!g.aircraft; if(!g.aircraft) g.aircraftBy=null; } });
+    if(a==="virtual") return confirmBox("이글루를 가상 배치(10개)로 되돌릴까요?", ()=>mutate(s=>{ s.center={...DEFAULT_CENTER}; s.igloos=virtualIgloos(DEFAULT_CENTER,1); s.igLayout=2; s.customIgloos=false; }));
+    const fix=gpsFix(); if(!fix) return toast(IS_APP?"GPS 위치를 아직 받지 못했습니다. 바깥에서 잠시 기다린 뒤 다시 누르세요":"이 기능은 휴대폰 앱에서 GPS로 동작합니다");
+    if(a==="addhere") promptBox("이글루 이름 (예: 이글루 11)", v=>{ const name=(v||"").trim()||`이글루 ${(S.igloos||[]).length+1}`;
+      mutate(s=>{ if(!s.igloos.length||s.igloos.every(g=>g.id.startsWith("ig"))&&!s.customIgloos){ s.igloos=[]; s.center={lat:fix.lat,lon:fix.lon}; s.customIgloos=true; }
+        s.igloos.push({id:"u"+uid(), name, lat:fix.lat, lon:fix.lon, aircraft:false, aircraftBy:null, assignedTo:null, evac:[], closed:false, closedBy:null, closedAt:null, unavailable:false}); }); toast(`${name} 등록 (오차 약 ${Math.round(fix.acc||0)}m)`); }, "text");
+    if(a==="demohere") confirmBox("지금 위치를 기준점으로 이글루 10개를 주변(약 200~450m)에 다시 만들까요?", ()=>mutate(s=>{ s.center={lat:fix.lat,lon:fix.lon}; s.igloos=virtualIgloos(s.center,0.3); s.customIgloos=false; })); });
+}
+function roomPanelHTML(){
+  const inc=active(), sim=S.sim;
+  return `${roomStatusHTML(inc)}
+   <div class="card" style="margin-top:12px"><h3>가상 표적 (시뮬레이터)</h3>
+    <div class="row"><span>모드</span><button data-mode="training" class="${roomCfg.mode==="training"?"on":""}" ${inc?"disabled":""}>훈련</button><button data-mode="real" class="${roomCfg.mode==="real"?"on":""}" ${inc?"disabled":""}>실제</button></div>
+    <div class="row" style="margin-top:8px">
+      <label>출발 <input id="cfKm" type="number" value="${roomCfg.startKm}" min="1" max="30" step="0.5" style="width:74px">km</label>
+      <label>속도 <input id="cfSp" type="number" value="${roomCfg.speed}" min="10" max="400" style="width:74px">km/h</label>
+      <label>방위 <input id="cfBr" type="number" value="${roomCfg.bearing}" min="0" max="359" style="width:64px">°</label></div>
+    <div class="row" style="margin-top:8px"><span>배속</span>${[1,5,10].map(v=>`<button data-mult="${v}" class="${(sim?sim.mult:roomCfg.mult)===v?"on":""}">${v}배</button>`).join("")}</div>
+    <div class="row" style="margin-top:10px">
+      ${inc?`<button data-room="pause">${sim&&sim.paused?"재개":"일시정지"}</button><button class="dang" data-room="clear">상황 해제</button>`
+           :`<button class="pri" data-room="start" style="height:48px">▶ 가상 표적 시작</button>`}
+      <button data-room="test">시험 알림</button><button data-room="reset">⟲ 처음 상태로</button></div>
+    <div class="muted" style="margin-top:6px">${speedNote()}</div></div>`;
+}
+function speedNote(){ const sp=+roomCfg.speed; return `${SPEED_NAME[speedClass(sp)]} 드론 · 10km 선까지 ${fmtDur(Math.max(0,(roomCfg.startKm-10)*1000)/(sp/3.6)/roomCfg.mult)} (${roomCfg.mult}배속 기준). 시연 중 이 창을 닫지 마세요.`; }
+function bindRoom(root){
+  root.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ const v=b.dataset.mode;
+    if(v==="real") confirmBox("실제 모드로 시작합니다. 모든 알림이 실제 상황으로 표시됩니다. 계속할까요?", ()=>{ roomCfg.mode="real"; render(); });
+    else { roomCfg.mode="training"; render(); } });
+  root.querySelectorAll("[data-mult]").forEach(b=>b.onclick=()=>{ roomCfg.mult=+b.dataset.mult; if(S.sim) mutate(s=>{ if(s.sim) s.sim.mult=roomCfg.mult; }); else render(); });
+  ["cfKm","cfSp","cfBr"].forEach(id=>{ const el=root.querySelector("#"+id); if(el) el.onchange=()=>{ roomCfg.startKm=+root.querySelector("#cfKm").value||12; roomCfg.speed=+root.querySelector("#cfSp").value||60; roomCfg.bearing=(+root.querySelector("#cfBr").value||0)%360; render(); }; });
+  root.querySelectorAll("[data-room]").forEach(b=>b.onclick=()=>{ unlockAudio(); const a=b.dataset.room;
+    if(a==="start") apiStartIncident(roomCfg.mode, roomCfg);
+    if(a==="pause") mutate(s=>{ if(s.sim){ s.sim.paused=!s.sim.paused; s.sim.owner=WIN; s.sim.beat=Date.now(); } });
+    if(a==="clear") confirmBox("상황을 해제할까요? 모든 화면에 해제가 표시됩니다.", ()=>apiClear());
+    if(a==="reset") return apiResetDemo(false);
+    if(a==="test"){ mutate(s=>{ s.test=Date.now(); }); toast("접속한 모든 화면에 시험 알림을 보냈습니다"); } });
+}
+function renderRoom(){
+  const inc=active();
+  paint(band(`<span>상황실</span>`) + `<div class="wrap"><div class="grid2">
+    <div><div class="card">${ringsHTML("rings")}</div>${roomPanelHTML()}${resetNoteHTML()}</div>
+    <div><div class="card"><h3>직능별 완료 현황 (실시간)</h3>${roleTable(inc)}</div>
+      <div class="card"><h3>경보 타임라인</h3>${timelineHTML(inc)}</div>
+      ${iglooPanelHTML()}
+      <div class="card"><h3>관리</h3><div class="row"><a href="#/history">기록 보기</a> · <a href="#/board">시연 보드</a> · <a href="#/entry">입장 화면</a>
+        <span style="margin-left:auto"></span><button data-adm="pin">PIN 변경</button><button data-adm="reset">시연 데이터 초기화</button></div></div></div></div></div>`, ()=>{ bindRoom($app); bindAdmin($app); bindIgRoom($app); });
+}
+function bindAdmin(root){
+  root.querySelectorAll("[data-adm]").forEach(b=>b.onclick=()=>{ const a=b.dataset.adm;
+    if(a==="pin"){ promptBox("새 PIN 4자리", v=>{ if(/^\d{4}$/.test(v)){ mutate(s=>{ s.settings.pin=v; }); toast("PIN을 바꿨습니다"); } else toast("숫자 4자리를 입력하세요"); }); }
+    if(a==="reset") confirmBox("모든 상황 기록과 접속자 정보를 지울까요?", ()=>{ const pin=S.settings.pin; mutate(s=>{ Object.assign(s, blank()); s.settings.pin=pin; }); sessionStorage.removeItem("droneAlarm.me"); localStorage.removeItem("droneAlarm.me"); }); });
+}
+
+// ===== 시연 보드 (PC 에뮬레이션): 상황실 + 휴대폰 4대
+const BOARD_MEMBERS=[["pilot","독수리1"],["maintenance","정비1"],["security","방호1"]];
+const BOARD_ROLES=BOARD_MEMBERS.map(b=>b[0]);
+let boardIds=null, boardPop={};
+function boardPresence(){
+  mutate(s=>{ boardIds=BOARD_MEMBERS.map(([role,cs])=>{ let m=Object.values(s.members).find(x=>x.role===role&&x.callsign===cs);
+    if(!m){ m={id:uid(), role, callsign:cs, createdAt:Date.now()}; s.members[m.id]=m; } m.lastSeen=Date.now(); return m.id; }); });
+}
+function renderBoard(){
+  if(!boardIds) { boardPresence(); return; }
+  if(BOARD_ROLES.indexOf(prefs().boardVoice)<0) setPref("boardVoice","pilot");
+  const inc=active();
+  // 보드에서는 휴대폰마다 팝업을 따로 띄움
+  if(popup && popup.kind==="alert"){ BOARD_ROLES.forEach(r=>boardPop[r]={...popup}); popup=null; }
+  if(popup && popup.kind==="clear"){ BOARD_ROLES.forEach(r=>boardPop[r]={...popup}); popup=null; }
+  paint(band(`<span>PC 시연 보드 · 휴대폰 3대</span>`) + `<div class="board"><div class="bleft">
+     <div class="card" style="padding:8px">${ringsHTML("rings")}</div>${roomPanelHTML()}
+     ${resetNoteHTML()}
+     <div class="card"><h3>직능별 완료 현황</h3>${roleTable(inc, BOARD_ROLES)}</div>
+     <div class="card"><h3>경보 타임라인</h3>${timelineHTML(inc)}</div>
+     ${iglooPanelHTML()}
+     <div class="card"><div class="row"><span>음성 안내 직능</span><select id="bv">${BOARD_ROLES.map(r=>`<option value="${r}" ${prefs().boardVoice===r?"selected":""}>${ROLES[r]}</option>`).join("")}</select>
+       <a href="#/history">기록 보기</a> · <a href="#/room">상황실만 보기</a> · <a href="#/entry">입장 화면</a></div></div></div>
+   <div class="phones">${boardIds.map((id,i)=>{ const role=BOARD_MEMBERS[i][0];
+     const pop=boardPop[role]; const save=popup; popup=pop||null; popMid=id; const ph=popupHTML(role,true); popup=save;
+     return `<div class="pcol"><div class="plabel">${ROLES[role]} · ${BOARD_MEMBERS[i][1]}</div><div class="phone"><div class="pbar"><span>${fmtClock(Date.now()).slice(0,5)}</span><span class="punch"></span><span>📶 🔋</span></div>
+       <div class="scr" data-role="${role}">${band()}${dutyHTML(id,true)}${ph.replace('data-pop="1"',`data-bpop="${role}"`)}</div><div class="pnav"><span>|||</span><span>○</span><span>‹</span></div></div><div class="pside"></div></div>`; }).join("")}</div></div>`, ()=>{
+  bindRoom($app); bindDuty($app); bindIgRoom($app);
+  $app.querySelectorAll("[data-bpop]").forEach(el=>el.onclick=()=>{ delete boardPop[el.dataset.bpop]; render(); });
+  const bv=document.getElementById("bv"); if(bv) bv.onchange=e=>setPref("boardVoice",e.target.value); });
+}
+
+// ===== 화면 4. 기록 + 기본 보고서 (PRD 7.4 규칙 기반)
+let histSel=null;
+function buildReport(inc){
+  const mname=id=>S.members[id]||(inc.acks.find(a=>a.memberId===id)||{});
+  const roleStats=DUTY_ROLES.map(role=>{
+    const targets=inc.alerts.flatMap(al=>(al.targets||[]).filter(id=>(mname(id).role)===role).map(id=>({id,level:al.level})));
+    const mem=[...new Set(targets.map(t=>t.id))];
+    const acks=inc.acks.filter(a=>a.role===role); const need=targets.length;
+    const avg=acks.length?Math.round(acks.reduce((s,a)=>s+a.elapsed,0)/acks.length):null;
+    return {role:ROLES[role], members:mem.length, completed:`${acks.length}/${need} 완료`, avg_sec:avg,
+      comment: !mem.length?"경보 대상 인원 없음": acks.length>=need ? (avg!=null&&avg>60?"모두 완료했으나 평균 처리 시간이 60초를 넘음":"모든 단계 지시를 완료함") : `${need-acks.length}건 미완료`}; });
+  const issues=[];
+  inc.alerts.forEach(al=>(al.targets||[]).forEach(id=>{ const m=mname(id); const a=inc.acks.find(x=>x.level===al.level&&x.memberId===id);
+    if(!a) issues.push(`${ROLES[m.role]||""} ${m.callsign||""}이(가) ${al.level}단계 지시를 완료하지 않음`);
+    else if(a.elapsed>60) issues.push(`${ROLES[m.role]} ${m.callsign}의 ${al.level}단계 완료가 ${a.elapsed}초 걸림`); }));
+  const fastest=inc.alerts.length>1 ? Math.min(...inc.alerts.slice(1).map((a,i)=>Math.round((a.issuedAt-inc.alerts[i].issuedAt)/1000))) : null;
+  const improvements=[];
+  if(issues.some(s=>s.includes("완료하지 않음"))) improvements.push("미완료 직능에 대해 단계별 지시를 반복 숙달하고, 격상 시 이전 단계 미완료 항목 처리 기준을 정할 것");
+  if(issues.some(s=>s.includes("초 걸림"))) improvements.push("완료까지 60초를 넘긴 지시는 문구를 줄이거나 사전 준비 항목으로 옮길 것");
+  if(fastest!=null&&fastest<60) improvements.push(`단계 간 간격이 최소 ${fastest}초(시뮬레이션 ${inc.simMult}배속 기준)로 짧으므로 고속 드론 상황을 가정한 숙달 훈련이 필요함`);
+  improvements.push("실제 탐지체계 연동 전 동일 시나리오로 정기 훈련을 실시하고 결과를 비교할 것");
+  const t0=inc.startedAt, t1=inc.clearedAt||Date.now();
+  return {
+    summary:`${inc.mode==="training"?"훈련":"실제"} 상황으로 ${fmtClock(t0)}에 시작해 ${inc.clearedAt?fmtClock(t1)+"에 해제":"진행 중"}되었습니다. ${SPEED_NAME[inc.speedClass]} 드론이 접근하여 최고 ${inc.level}단계 ${LEVELS[inc.level].name}까지 발령되었고, 경보는 ${inc.alerts.length}회 발령되었습니다.`,
+    timeline: inc.alerts.map(a=>[a.issuedAt,`${fmtClock(a.issuedAt)} ${a.level}단계 ${LEVELS[a.level].name} 발령(${(a.distance_m/1000).toFixed(1)}km, 도착 예상 ${fmtDur(a.eta_sec)})`])
+      .concat(inc.acks.map(a=>[a.completedAt,`${fmtClock(a.completedAt)} ${ROLES[a.role]} ${a.callsign} ${a.level}단계 완료(${a.elapsed}초)`]))
+      .concat((inc.iglooLog||[]).map(e=>[e.t,`${fmtClock(e.t)} [이글루] ${e.text}`]))
+      .concat(inc.clearedAt?[[inc.clearedAt,`${fmtClock(inc.clearedAt)} 상황 해제`]]:[]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]),
+    igloo: (()=>{ const L=inc.iglooLog||[]; return {closed:L.filter(e=>e.text.includes("Close 완료")).length, opened:L.filter(e=>e.text.includes("Open 완료")).length,
+      arrived:L.filter(e=>e.text.includes("도착·입고")).length, entered:L.filter(e=>e.text.includes("입실")).length,
+      stillClosed:(S.igloos||[]).filter(g=>g.closed).map(g=>g.name)}; })(),
+    role_evaluation: roleStats, issues, improvements, source:"fallback"};
+}
+function reportText(inc, r){
+  return `■ 드론 상황 결과 보고서 초안 (AI 미사용 기본 보고서)\n모드: ${inc.mode==="training"?"훈련":"실제"} · 시작 ${fmtDate(inc.startedAt)} · 해제 ${inc.clearedAt?fmtDate(inc.clearedAt):"-"} · 최고 ${inc.level}단계\n\n`+
+   `1. 요약\n${r.summary}\n\n2. 타임라인\n${r.timeline.map(t=>" - "+t).join("\n")}\n\n3. 직능별 대응 평가\n${r.role_evaluation.map(e=>` - ${e.role}: ${e.completed}, 평균 ${e.avg_sec==null?"-":e.avg_sec+"초"} · ${e.comment}`).join("\n")}\n\n`+
+   `이글루: 조종사 입고 ${r.igloo?r.igloo.arrived:0}건, 정비사 대피 ${r.igloo?r.igloo.entered:0}건, Close ${r.igloo?r.igloo.closed:0}건, Open ${r.igloo?r.igloo.opened:0}건${r.igloo&&r.igloo.stillClosed.length?` (아직 닫힌 이글루: ${r.igloo.stillClosed.join(", ")})`:""}\n\n`+
+   `4. 지연·미완료\n${r.issues.length?r.issues.map(t=>" - "+t).join("\n"):" - 없음"}\n\n5. 개선 제안\n${r.improvements.map(t=>" - "+t).join("\n")}\n\n※ 모든 내용은 시연용 가상 데이터입니다.`;
+}
+function renderHistory(){
+  const list=S.incidents;
+  const inc=list.find(i=>i.id===histSel);
+  paint(band(`<span>기록</span>`) + `<div class="wrap"><div class="row" style="margin-bottom:10px"><a href="#/room">← 상황실</a></div><div class="grid2">
+    <div class="card"><h3>지난 상황</h3>${list.length?`<table><tr><th>모드</th><th>시작</th><th>해제</th><th>최고</th></tr>${list.map(i=>`<tr data-h="${i.id}" style="cursor:pointer;${i.id===histSel?"background:#e3f2fd":""}"><td>${i.mode==="training"?"훈련":"실제"}</td><td>${fmtDate(i.startedAt)}</td><td>${i.clearedAt?fmtClock(i.clearedAt):"진행 중"}</td><td>${i.level?`<span class="tag" style="background:${LEVELS[i.level].color};color:${LEVELS[i.level].text}">${i.level}단계</span>`:"-"}</td></tr>`).join("")}</table>`:`<div class="muted">기록이 없습니다.</div>`}</div>
+    <div>${inc?historyDetail(inc):`<div class="card muted">왼쪽에서 상황을 고르세요.</div>`}</div></div></div>`, ()=>bindHistory(inc));
+}
+function bindHistory(inc){
+  $app.querySelectorAll("[data-h]").forEach(tr=>tr.onclick=()=>{ histSel=tr.dataset.h; renderHistory(); });
+  const rb=document.getElementById("mkReport"); if(rb) rb.onclick=()=>{ const r=buildReport(inc); mutate(s=>{ const x=s.incidents.find(i=>i.id===inc.id); if(x){ x.report=r; x.reportAt=Date.now(); } }); };
+  const cb=document.getElementById("cpReport"); if(cb) cb.onclick=()=>{ const t=document.getElementById("repText").textContent;
+    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("복사했습니다")).catch(()=>{ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); toast("복사했습니다");}catch(e){toast("복사가 막혀 있습니다");} ta.remove(); }); };
+}
+function historyDetail(inc){
+  const ev=inc.alerts.map(a=>({t:a.issuedAt, h:`<span class="tag" style="background:${LEVELS[a.level].color};color:${LEVELS[a.level].text}">${a.level}단계 ${LEVELS[a.level].name}</span> 발령 · ${(a.distance_m/1000).toFixed(2)}km · ${a.speed_kmh}km/h ${SPEED_NAME[a.speed_class]} · 도착 예상 ${fmtDur(a.eta_sec)}`}))
+    .concat(inc.acks.map(a=>({t:a.completedAt, h:`✔ ${ROLES[a.role]} ${esc(a.callsign)} · ${a.level}단계 완료 (${a.elapsed}초)`})))
+    .concat((inc.iglooLog||[]).map(e=>({t:e.t, h:`🏠 ${esc(e.text)}`})))
+    .concat(inc.clearedAt?[{t:inc.clearedAt,h:"<b>상황 해제</b>"}]:[]).sort((a,b)=>a.t-b.t);
+  const r=inc.report;
+  return `<div class="card"><h3>상세 타임라인</h3>${ev.map(e=>`<div style="padding:4px 0;border-bottom:1px dashed #e3e8ee"><span class="muted">${fmtClock(e.t)}</span> ${e.h}</div>`).join("")||'<div class="muted">기록 없음</div>'}</div>
+   <div class="card"><h3>결과 보고서 초안</h3><div class="row"><button class="pri" id="mkReport">${r?"다시 만들기":"보고서 초안 만들기"}</button>${r?'<button id="cpReport">복사</button>':""}</div>
+   <div class="muted" style="margin-top:6px">AI 미사용 기본 보고서입니다. (서버·Gemini 연동 시 AI 초안으로 바뀝니다)</div>
+   ${r?`<pre id="repText" style="white-space:pre-wrap;font-family:inherit;font-size:14px;line-height:1.55;background:#f5f7fa;padding:12px;border-radius:10px;margin-top:10px">${esc(reportText(inc,r))}</pre>`:""}</div>`;
+}
+
+// ---------------- 공용 대화상자 (WebView·브라우저 모두 동작)
+function confirmBox(msg, ok){ const d=document.createElement("div"); d.className="overlay"; d.innerHTML=`<div class="modal"><div style="font-size:17px;line-height:1.5">${esc(msg)}</div><div class="row" style="justify-content:flex-end;margin-top:16px"><button data-c="0">취소</button><button class="pri" data-c="1">확인</button></div></div>`;
+  document.body.appendChild(d); d.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ d.remove(); if(b.dataset.c==="1") ok(); }); }
+function promptBox(msg, ok, kind){ const d=document.createElement("div"); d.className="overlay"; d.innerHTML=`<div class="modal"><div>${esc(msg)}</div><input id="pb" style="width:100%;margin-top:8px" ${kind==="text"?'maxlength="20"':'inputmode="numeric" maxlength="4"'}><div class="row" style="justify-content:flex-end;margin-top:12px"><button data-c="0">취소</button><button class="pri" data-c="1">확인</button></div></div>`;
+  document.body.appendChild(d); d.querySelector("#pb").focus(); d.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ const v=d.querySelector("#pb").value; d.remove(); if(b.dataset.c==="1") ok(v); }); }
+
+// ---------------- 카운트다운 갱신 (배속만큼 빠르게)
+setInterval(()=>{ const inc=active(); if(!inc) return; const e=etaNow(inc); document.querySelectorAll("[data-eta]").forEach(el=>el.textContent=e==null?"-":fmtDur(e)); },250);
+// 걷는 동안 이글루 거리·방향이 바뀌므로 1초마다 갱신
+setInterval(()=>{ if(document.querySelector("[data-live=igdist],#igroom")) updateLive(); },1000);
+// 화면 전환 시 강제로 다시 그리기
+window.addEventListener("hashchange", ()=>{ lastHTML=""; }, true);
+// 다른 창의 변경을 놓치지 않도록 1초마다 확인 (BroadcastChannel 미지원 대비)
+setInterval(()=>{ const s=load(); if(s.rev!==S.rev){ S=s; onState(); } },1000);
+
+// 상황 종료 후 자동 복귀: 해제됨 + 닫힌 이글루 없음 → 5초 뒤 처음 시연 상태
+let resetPending=null;
+function resetNoteHTML(){ const last=S.incidents[0]; if(!last||last.status!=="cleared"||last.clearedAt<=(S.resetAt||0)) return "";
+  const closed=(S.igloos||[]).filter(g=>g.closed);
+  return `<div class="resetnote">상황 해제됨 · ${closed.length?`정비사 Open 대기: ${closed.map(g=>esc(g.name)).join(", ")}<br><span style="font-weight:400">모두 Open 완료되면 자동으로 처음 시연 상태로 돌아갑니다.</span>`:`<span data-live="resetcd">잠시 후 처음 시연 상태로 돌아갑니다…</span>`}</div>`; }
+setInterval(()=>{ const r=route(); if(r==="entry") return;
+  const last=S.incidents[0], waiting=last&&last.status==="cleared"&&last.clearedAt>(S.resetAt||0)&&!(S.igloos||[]).some(g=>g.closed);
+  if(!waiting){ resetPending=null; return; }
+  if(!resetPending) resetPending=Date.now()+5000;
+  const left=Math.ceil((resetPending-Date.now())/1000), el=document.querySelector("[data-live=resetcd]"); if(el) el.textContent=`모든 이글루 개방 완료 · ${Math.max(0,left)}초 후 처음 시연 상태로 돌아갑니다`;
+  if(Date.now()>=resetPending){ resetPending=null; apiResetDemo(true); } },500);
+if(!location.hash) location.hash = IS_APP ? "#/entry" : "#/board";
+render(); detectEvents();
+</script>
+</body>
+</html>
