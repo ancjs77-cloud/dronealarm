@@ -11,15 +11,25 @@
 - 문서: docs/드론경보_체계소개.pptx(5장), docs/드론경보_역할별_사용매뉴얼.pdf(조종사·정비사·관제사·방호관계자·상황실 PC, 미래형 배경)
 - GitHub: ancjs77-cloud/dronealarm (main)
 
+## 2026-11-24 세션에서 추가된 것 (자세한 내용: `세션정리_2026-11-24.md`)
+- 상황도 클릭 확대, PC 보드 왼쪽 칸 560px, 상황실 상황도에 주변 주요 지점(공개 지명 대략 위치) 표시, 휴대폰 지도는 지명 없음
+- APK 재빌드(서명 키 변경 → 휴대폰은 예전 앱 삭제 후 설치)
+- **Vercel 배포 완료: https://dronealarm.vercel.app** (프로젝트 hong-ab60/dronealarm, GitHub 연결 → main 푸시 시 자동 배포. 연결 후 첫 자동 배포는 아직 미확인)
+- **Supabase 기기 연동 코드 작성(미커밋)**: `drone_state` 테이블 한 행(방 코드)에 상태 저장, rev 비교 저장 + 1초 확인. `supabase/setup.sql`, `SUPA_DEFAULT`에 URL·공개 키 넣으면 활성. APK 매니페스트에 INTERNET 권한 추가(미빌드)
+
 ## 남은 일 / 사용자가 원했던 다음 단계 (우선순위 순)
-1. **Vercel 배포** — 휴대폰에서 APK 없이 주소로 시연. `vercel.json` 준비됨("/" → /web/index.html). Vercel에서 이 GitHub 저장소를 Import하거나 `npx vercel --prod`. 사용자는 Vercel 계정을 연결해 둔 상태(claude.ai 커넥터). 배포 주소는 공개이므로 가상 데이터만 유지.
-2. **Supabase 연동** — 현재 동기화는 같은 PC(같은 브라우저) 안에서만. 휴대폰↔PC 실시간 연동을 위해 상태(`S`: members, incidents, sim, igloos, center)를 Supabase 테이블 + Realtime으로 옮기는 작업. 키(URL, anon key)는 사용자에게 받아야 함. 오프라인 단일 파일 모드는 계속 동작하도록(키 없으면 localStorage 모드) 설계 권장.
-3. Gemini 등 AI 보고서 — 키 필요. 현재 규칙 기반 보고서로 대체 중.
-4. 확인 필요/개선 후보
+1. **Supabase 연동 마무리** — 사용자에게 Project URL·공개 키(anon/publishable) 받기 → `SUPA_DEFAULT` 입력 → 창 2개로 연동 시험 → 커밋·푸시(Vercel 자동 배포 확인) → APK 재빌드.
+2. Gemini 등 AI 보고서 — 키 필요. 현재 규칙 기반 보고서로 대체 중.
+3. 확인 필요/개선 후보
    - 조종사 비행 단계(시동·지상활주·이륙·착륙) 4가지 구분: 과거(이전 Kotlin 버전)에 요청·구현했으나 PRD 재구성 후 현재 PROC에는 없음. 사용자에게 다시 넣을지 확인.
-   - PC 보드 왼쪽 상황도가 작게 보임(왼쪽 칸 460px). 필요 시 칸 넓히기 또는 클릭 확대.
+   - 연동을 1초 확인(폴링) 대신 Supabase Realtime(WebSocket)으로 바꾸면 더 빠름(필요 시).
    - 동대구IC 등 주요 지점 좌표는 근사값 — 사용자가 정확한 값을 주면 `LANDMARKS` 수정.
-   - 갤럭시에서 APK 설치가 막힘(자동 차단/Play 프로텍트). 사용자는 PC 시연을 주로 사용. Vercel 배포가 대안.
+   - 갤럭시에서 APK 설치가 막힘(자동 차단/Play 프로텍트). 사용자는 PC 시연을 주로 사용. Vercel 주소로 대체 가능.
+
+## Windows 작업 메모
+- PowerShell 실행 정책 때문에 `npx` 대신 `npx.cmd` (예: `npx.cmd vercel deploy --prod --yes`).
+- GitHub 푸시 로그인은 `git -c credential.gitHubAuthModes=browser push origin main` (브라우저 승인).
+- 로컬 시연 서버: `node .claude/serve.js` → http://localhost:5173
 
 ## 사용자 성향·소통
 - 한국어, 짧은 지시를 연속으로 보냄(오타 많음: "시현"=시연, "vessel"=Vercel, "superbase"=Supabase).

@@ -1,6 +1,6 @@
 # CLAUDE.md — 드론경보 (비행장 드론 위협 경보·행동지시 앱, 시연판)
 
-이 저장소에서 작업할 때 먼저 읽는 프로젝트 안내서입니다. 진행 상황과 남은 일은 `HANDOFF.md`를 보세요.
+이 저장소에서 작업할 때 먼저 읽는 프로젝트 안내서입니다. 진행 상황과 남은 일은 `HANDOFF.md`, 최근 세션 내용은 `세션정리_2026-11-24.md`를 보세요.
 사용자와는 **한국어**로 대화합니다. 사용자는 비개발자이며 결과물(PC 시연·갤럭시 S 울트라 시연·발표 자료)을 중시합니다.
 
 ## 한 줄 요약
@@ -23,11 +23,15 @@ docs/                     ← 체계소개 PPTX(5장), 역할별 사용매뉴얼
 tools/build_apk.sh        ← web → assets 동기화 + APK 빌드·서명
 tools/tests/*.py          ← Playwright 회귀 테스트(헤드리스 크롬)
 tools/docs_build/         ← 매뉴얼·PPTX 재생성 스크립트(배경 그림 bg.html 포함)
-vercel.json               ← "/" → /web/index.html (Vercel 정적 배포용, 아직 미배포)
+vercel.json               ← "/" → /web (cleanUrls 때문에 .html 없이). 배포: https://dronealarm.vercel.app (main 푸시 시 자동)
+.vercelignore             ← 배포 제외(.claude, tools, android_apk, docs)
+supabase/setup.sql        ← 기기 연동 테이블 drone_state + RLS (Supabase SQL Editor에서 실행)
 ```
 
 ## web/index.html 핵심 설계
 - 상태: `localStorage["droneAlarm.v1"]`. 같은 PC의 여러 창은 BroadcastChannel("droneAlarm") + storage 이벤트 + 1초 폴링으로 동기화. 변경은 항상 `mutate(fn)`.
+- 기기 연동(Supabase, 선택): `SUPA_DEFAULT` 또는 연동 설정(prefs.cloud)에 URL·공개 키가 있으면 켜짐. `mutate`의 fn을 대기열(`cloud.q`)에 넣고 `cFlush()`가 `rev=eq.` 조건 PATCH로 저장, 충돌 시 최신 상태에 fn 재적용 → **mutate에 넘기는 fn은 다시 실행돼도 안전해야 함**(밖에서 만든 값 사용, 외부 변수 변경 최소화). `cPoll()` 1초 확인. 키 없으면 기존 오프라인 동작.
+- 상황도: `drawRings(id,{landmarks:true})`는 상황실 상황도(`rings`, 확대 `ringsBig`)에만 주요 지점 표시. 휴대폰 지도에는 지명 표시 안 함(사용자 요청).
 - 렌더: `paint(html, bind)`는 HTML이 바뀔 때만 다시 그림(매초 전체 재렌더 금지 — 탭이 씹힘). 실시간 값은 `updateLive()`가 `data-live` 요소와 캔버스(`drawRings`, `drawIgRoom`, `drawPhoneMaps`)를 갱신.
 - 라우트: `#/entry`(직능 선택) `#/duty`(단말) `#/room`(상황실, PIN) `#/history` `#/board`(PC 시연 보드: 상황실+휴대폰 3대). PC(비앱)에서 해시 없으면 `#/board`, 앱(WebView)이면 `#/entry`.
 - 경보 규칙(PRD): 1 관심 10km · 2 주의 5km · 3 경계 3km · 4 심각 0.5km. 격상만, 같은 단계 1회, 해제는 상황실만. 거리 = `rwyDist()` 활주로 타원 거리(RWY={hdg:130, half:1375m, sep:210m}). 도착 예상(ETA) = 활주로 **중앙** 거리 / 속도.

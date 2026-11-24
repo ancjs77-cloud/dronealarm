@@ -60,6 +60,8 @@ canvas#rings{cursor:zoom-in}
 .zoomhint{text-align:center;font-size:12.5px;color:var(--muted);margin-top:4px}
 .ringzoom{position:fixed;inset:0;z-index:70;background:rgba(5,12,20,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;cursor:zoom-out}
 .ringzoom canvas{max-width:none;width:auto;height:calc(100vh - 70px);max-height:calc(100vw - 24px);aspect-ratio:1}
+.cloudbadge{position:fixed;right:10px;bottom:10px;z-index:65;background:#1b5e20;color:#fff;font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:12px;opacity:.9;pointer-events:none}
+.cloudbadge.bad{background:#b71c1c}
 .ringzoom .zt{color:#fff;font-weight:700;margin-top:8px;font-size:14px}
 .phones{flex:1;display:flex;gap:18px;justify-content:center;align-items:flex-start;min-width:0;height:100%}
 .pcol{flex:0 1 380px;min-width:250px;height:100%;display:flex;flex-direction:column;position:relative}
@@ -182,23 +184,89 @@ function load(){ try{ const s=JSON.parse(localStorage.getItem(KEY)); if(!s||!s.m
 let S = load();
 let chan=null; try{ chan=new BroadcastChannel("droneAlarm"); chan.onmessage=()=>{ S=load(); onState(); }; }catch(e){}
 window.addEventListener("storage", e=>{ if(e.key===KEY){ S=load(); onState(); } });
-/** 상태 변경: 최신 상태를 읽어 fn 적용 후 저장·전파 */
+/** 상태 변경: 최신 상태를 읽어 fn 적용 후 저장·전파. 클라우드 연동 중이면 fn을 대기열에 넣어 서버에도 반영 */
 function mutate(fn){
+  if(CLOUD.on){ cloud.q.push(fn); if(cloud.base){ cAdopt(); cFlush(); return; } }
   S = load(); fn(S); S.rev=(S.rev||0)+1;
   try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){}
   try{ chan && chan.postMessage(S.rev); }catch(e){}
   onState();
+}
+
+// ---------------- 기기 간 연동 (Supabase) — 휴대폰·PC가 같은 "방 코드"의 상태를 공유
+// 상태 전체를 drone_state 테이블의 한 행(id=방 코드)에 저장. 변경은 rev 비교 후 저장(충돌 시 최신 상태에 다시 적용), 1초마다 확인.
+// 주소·키가 없거나 꺼 두면 지금처럼 이 기기 안에서만 동작(오프라인). 키는 공개용(anon/publishable) 키만 사용.
+const SUPA_DEFAULT={url:"https://yzhjjrreybjcrbqzjils.supabase.co", key:"sb_publishable_ebOoqLOT7wcvgqEqOZE1YA_6hYuxjFR", room:"demo"};
+function cloudCfg(){ const c=Object.assign({}, SUPA_DEFAULT, prefs().cloud||{}); c.on=!!(c.url&&c.key&&c.room&&!c.off); return c; }
+const CLOUD=cloudCfg();
+const cloud={base:null, q:[], busy:false, polling:false, status:CLOUD.on?"연결 중":"꺼짐", err:""};
+const cEnc=()=>encodeURIComponent(CLOUD.room);
+function cHeaders(extra){ const h={apikey:CLOUD.key,"Content-Type":"application/json"}; if(/^eyJ/.test(CLOUD.key)) h.Authorization="Bearer "+CLOUD.key; return Object.assign(h,extra||{}); }
+function cUrl(q){ return CLOUD.url.replace(/\/+$/,"")+"/rest/v1/drone_state"+q; }
+async function cGet(sel){ const r=await fetch(cUrl(`?id=eq.${cEnc()}&select=${sel}`),{headers:cHeaders(),cache:"no-store"}); if(!r.ok) throw new Error("읽기 실패 "+r.status); const a=await r.json(); return a[0]||null; }
+function cSetBase(row){ cloud.base=row.state; cloud.base.rev=row.rev; }
+function cApplyQ(base, fns){ const s=JSON.parse(JSON.stringify(base)); fns.forEach(f=>{ try{ f(s); }catch(e){ console.warn(e); } }); return s; }
+/** 화면 상태 = 서버 상태 + 아직 저장 안 된 내 변경 */
+function cAdopt(){ const s=cApplyQ(cloud.base, cloud.q); s.rev=cloud.base.rev+(cloud.q.length?0.5:0);
+  S=s; try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} try{ chan && chan.postMessage(S.rev); }catch(e){} onState(); }
+function cStatus(st, err){ cloud.status=st; cloud.err=err||""; cBadge(); }
+async function cInit(){
+  try{ let row=await cGet("rev,state");
+    if(!row){ const s=load(); s.rev=Math.max(1,Math.round(s.rev||1));
+      const r=await fetch(cUrl(""),{method:"POST",headers:cHeaders({Prefer:"resolution=ignore-duplicates,return=minimal"}),body:JSON.stringify({id:CLOUD.room,rev:s.rev,state:s})});
+      if(!r.ok) throw new Error("방 만들기 실패 "+r.status+" "+(await r.text()).slice(0,120)); row=await cGet("rev,state"); }
+    cSetBase(row); cStatus("연동 중"); cAdopt(); cFlush();
+  }catch(e){ cStatus("오류", e.message); setTimeout(cInit,3000); }
+}
+async function cFlush(){
+  if(cloud.busy||!cloud.base||!cloud.q.length) return; cloud.busy=true;
+  try{
+    for(let tries=0; tries<8 && cloud.q.length; tries++){
+      const fns=cloud.q.slice(), s=cApplyQ(cloud.base, fns); s.rev=cloud.base.rev+1;
+      const r=await fetch(cUrl(`?id=eq.${cEnc()}&rev=eq.${cloud.base.rev}&select=rev`),{method:"PATCH",headers:cHeaders({Prefer:"return=representation"}),body:JSON.stringify({rev:s.rev,state:s,updated_at:new Date().toISOString()})});
+      if(!r.ok) throw new Error("저장 실패 "+r.status);
+      if((await r.json()).length){ cloud.q.splice(0,fns.length); cloud.base=s; cStatus("연동 중"); continue; }
+      const row=await cGet("rev,state"); if(row) cSetBase(row);          // 다른 기기가 먼저 저장함 → 최신 상태에 내 변경을 다시 적용
+    }
+    cAdopt();
+  }catch(e){ cStatus("오류", e.message); }
+  finally{ cloud.busy=false; }
+  if(cloud.q.length) setTimeout(cFlush, cloud.status==="오류"?2000:50);
+}
+async function cPoll(){
+  if(!cloud.base||cloud.busy||cloud.polling) return; cloud.polling=true;
+  try{ const r=await cGet("rev"); if(cloud.status!=="연동 중") cStatus("연동 중");
+    if(r && r.rev>cloud.base.rev){ const row=await cGet("rev,state"); if(row && row.rev>cloud.base.rev && !cloud.busy){ cSetBase(row); cAdopt(); } }
+  }catch(e){ cStatus("오류", e.message); }
+  finally{ cloud.polling=false; }
+}
+/** 화면 오른쪽 아래 연동 표시 */
+function cBadge(){ if(!CLOUD.on) return; let b=document.getElementById("cloudBadge");
+  if(!b){ b=document.createElement("div"); b.id="cloudBadge"; b.className="cloudbadge"; document.body.appendChild(b); }
+  const ok=cloud.status==="연동 중"; b.className="cloudbadge"+(ok?"":" bad"); b.textContent=`${ok?"●":"○"} 기기 연동 ${cloud.status} · 방 ${CLOUD.room}`; b.title=cloud.err||"Supabase 연동"; }
+function cloudSettings(){
+  const c=Object.assign({}, SUPA_DEFAULT, prefs().cloud||{}), d=document.createElement("div"); d.className="overlay";
+  d.innerHTML=`<div class="modal"><h3 style="margin:0 0 6px">기기 연동 (Supabase)</h3>
+    <div class="muted" style="margin-bottom:10px">같은 <b>방 코드</b>를 쓰는 휴대폰·PC가 경보·완료·이글루 상태를 함께 봅니다. 비워 두거나 끄면 이 기기 안에서만 동작합니다.</div>
+    <div class="muted">프로젝트 주소 (Project URL)</div><input id="cfU" style="width:100%" placeholder="https://xxxx.supabase.co" value="${esc(c.url)}">
+    <div class="muted" style="margin-top:8px">공개 키 (anon / publishable)</div><input id="cfK" style="width:100%" value="${esc(c.key)}">
+    <div class="muted" style="margin-top:8px">방 코드</div><input id="cfR" style="width:100%" maxlength="30" value="${esc(c.room)}">
+    <label class="row" style="margin-top:10px;gap:6px"><input type="checkbox" id="cfOn" ${c.off?"":"checked"}> 연동 사용</label>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button data-c="0">취소</button><button class="pri" data-c="1">저장 후 다시 시작</button></div></div>`;
+  document.body.appendChild(d);
+  d.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ if(b.dataset.c==="1"){ const v=id=>d.querySelector(id).value.trim();
+    setPref("cloud",{url:v("#cfU"), key:v("#cfK"), room:v("#cfR")||"demo", off:!d.querySelector("#cfOn").checked}); location.reload(); } d.remove(); });
 }
 const active = () => S.incidents.find(i=>i.status==="active") || null;
 
 // ---------------- 서버 API에 해당하는 동작 (PRD 6.8)
 /** POST /api/members — 같은 직능+호출부호면 기존 사용자 */
 function apiMember(role, callsign){
-  let id=null;
+  let id=null; const nid=uid();   // 연동 충돌 시 fn이 다시 실행돼도 같은 id가 되도록 밖에서 만든다
   mutate(s=>{
     const ex=Object.values(s.members).find(m=>m.role===role&&m.callsign===callsign);
     if(ex){ ex.lastSeen=Date.now(); id=ex.id; }
-    else { id=uid(); s.members[id]={id, role, callsign, createdAt:Date.now(), lastSeen:Date.now()}; }
+    else { id=nid; s.members[id]={id, role, callsign, createdAt:Date.now(), lastSeen:Date.now()}; }
   });
   return id;
 }
@@ -318,7 +386,7 @@ setInterval(()=>{
   // (앱을 다시 켠 경우 등) 시뮬레이터를 돌리던 창이 5초 이상 응답이 없으면 이 창이 이어받음
   if(sim.owner!==WIN){ if(now-sim.beat>5000+Math.random()*1500) mutate(s=>{ if(s.sim&&Date.now()-s.sim.beat>5000){ s.sim.owner=WIN; s.sim.beat=Date.now(); } }); return; }
   mutate(s=>{
-    const m=s.sim; if(!m) return; m.beat=now;
+    const m=s.sim; if(!m||m.owner!==WIN) return; m.beat=now;   // 그사이 다른 기기가 이어받았으면 움직이지 않음(2배속 방지)
     if(m.paused) return;
     m.dist=Math.max(100, Math.round((m.dist - m.speed/3.6*m.mult)*10)/10);   // 1초 × 배속 만큼 이동, 100m 지점에서 선회
     apiDetection(s, rwyDist(m.dist, m.bearing), m.speed, m.bearing, m.dist);
@@ -457,10 +525,12 @@ function renderEntry(){
      <div class="muted" style="margin-top:6px">${IS_APP?"앱이 켜져 있는 동안 화면이 꺼지지 않으며, 경보 시 진동·경보음·음성으로 알립니다.":"PC 브라우저에서는 소리·음성으로 알립니다. 처음 한 번 아무 버튼이나 눌러야 소리가 납니다."}</div></div>
    <div class="card"><h3>PC 시연</h3><div class="muted">상황실과 휴대폰 4대(조종사·관제사·정비사·방호관계자)를 한 화면에 띄웁니다.</div>
      <button id="toBoard" style="margin-top:8px">시연 보드 열기 (상황실 PIN 필요)</button></div>
+   <div class="card"><h3>기기 연동</h3><div class="muted">${CLOUD.on?`휴대폰·PC가 방 코드 <b>${esc(CLOUD.room)}</b>로 같은 상황을 함께 봅니다 (Supabase).`:"꺼짐 · 이 기기 안에서만 동작합니다."}</div>
+     <button id="cloudSet" style="margin-top:8px">연동 설정</button></div>
    <div class="card"><h3>설치·사용 안내</h3><div class="muted" style="line-height:1.6">
      · 갤럭시: <b>드론경보.apk</b> 파일을 휴대폰으로 보내 실행 → "출처를 알 수 없는 앱" 허용 → 설치<br>
      · 배터리: 설정 ▸ 애플리케이션 ▸ 드론경보 ▸ 배터리 ▸ <b>제한 없음</b><br>
-     · 서버 없이 동작합니다. 휴대폰 한 대로 시연할 때는 행동 화면의 <b>단독 시연</b>을 쓰세요.<br>
+     · ${CLOUD.on?"기기 연동이 켜져 있으면 상황실(PC)에서 표적을 시작해도 휴대폰에 경보가 갑니다.":"서버 없이 동작합니다."} 휴대폰 한 대로 시연할 때는 행동 화면의 <b>단독 시연</b>을 쓰세요.<br>
      · 상황실 기본 PIN: <b>1234</b> (상황실 화면에서 변경)</div></div></div>`, bindEntry);
 }
 function bindEntry(){
@@ -472,6 +542,7 @@ function bindEntry(){
   document.getElementById("testN").onclick=()=>{ unlockAudio(); vibrate(VIB.test); beep(2,true); speak("알림 시험입니다. 진동과 소리를 확인하세요."); toast("알림 시험"); };
   document.getElementById("voice").onchange=e=>setPref("voice",e.target.checked);
   document.getElementById("toBoard").onclick=()=>{ unlockAudio(); go("board"); };
+  document.getElementById("cloudSet").onclick=cloudSettings;
 }
 function defaultCallsign(role){ return {pilot:"독수리1",controller:"관제1",maintenance:"정비1",security:"방호1"}[role]||""; }
 
@@ -887,10 +958,11 @@ function renderRoom(){
       <div class="card"><h3>경보 타임라인</h3>${timelineHTML(inc)}</div>
       ${iglooPanelHTML()}
       <div class="card"><h3>관리</h3><div class="row"><a href="#/history">기록 보기</a> · <a href="#/board">시연 보드</a> · <a href="#/entry">입장 화면</a>
-        <span style="margin-left:auto"></span><button data-adm="pin">PIN 변경</button><button data-adm="reset">시연 데이터 초기화</button></div></div></div></div></div>`, ()=>{ bindRoom($app); bindAdmin($app); bindIgRoom($app); });
+        <span style="margin-left:auto"></span><button data-adm="cloud">기기 연동</button><button data-adm="pin">PIN 변경</button><button data-adm="reset">시연 데이터 초기화</button></div></div></div></div></div>`, ()=>{ bindRoom($app); bindAdmin($app); bindIgRoom($app); });
 }
 function bindAdmin(root){
   root.querySelectorAll("[data-adm]").forEach(b=>b.onclick=()=>{ const a=b.dataset.adm;
+    if(a==="cloud") return cloudSettings();
     if(a==="pin"){ promptBox("새 PIN 4자리", v=>{ if(/^\d{4}$/.test(v)){ mutate(s=>{ s.settings.pin=v; }); toast("PIN을 바꿨습니다"); } else toast("숫자 4자리를 입력하세요"); }); }
     if(a==="reset") confirmBox("모든 상황 기록과 접속자 정보를 지울까요?", ()=>{ const pin=S.settings.pin; mutate(s=>{ Object.assign(s, blank()); s.settings.pin=pin; }); sessionStorage.removeItem("droneAlarm.me"); localStorage.removeItem("droneAlarm.me"); }); });
 }
@@ -1019,6 +1091,7 @@ setInterval(()=>{ const r=route(); if(r==="entry") return;
   if(Date.now()>=resetPending){ resetPending=null; apiResetDemo(true); } },500);
 if(!location.hash) location.hash = IS_APP ? "#/entry" : "#/board";
 render(); detectEvents();
+if(CLOUD.on){ cBadge(); cInit(); setInterval(cPoll,1000); }
 </script>
 </body>
 </html>
